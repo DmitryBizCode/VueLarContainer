@@ -1,0 +1,70 @@
+# Environment files
+.env
+.env.*
+!.env.example
+.env.backup
+.env.production
+
+# Logs
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+ContainersPHP/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE
+.phpactor.json
+.idea
+.vscode
+.fleet
+.nova
+.phpunit.cache
+.zed
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/node_modules
+/vendor
+
+# Build artifacts
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+!storage/framework/**/.gitkeep
+/bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Testing
+.phpunit.result.cache
+
+# Docker
+docker/nginx/ssl/*
+!docker/nginx/ssl/.gitkeep
+
+# Auth
+/auth.json
+
+# Laravel specific
+npm-debug.log
+yarn-error.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache
