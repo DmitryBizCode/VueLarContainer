@@ -1,3 +1,112 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Плавні переходи між секціями */
+section {
+    scroll-margin-top: 80px;
+    transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Анімації появи при скролі */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-on-scroll {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+.animate-slide-left {
+    animation: slide-in-left 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+.animate-slide-right {
+    animation: slide-in-right 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+.animate-scale-in {
+    animation: scale-in 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+/* Плавні переходи для карток */
+.card-hover {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+    transform: translateY(-8px) scale(1.02);
+}
+
+/* Плавний скрол */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Повністю приховати скролбар */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+/* Для Firefox */
+* {
+    scrollbar-width: none;
+}
+
+/* Для IE та Edge */
+* {
+    -ms-overflow-style: none;
+}
