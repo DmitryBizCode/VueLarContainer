@@ -17,14 +17,12 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     freetype \
     freetype-dev \
-    libonig \
-    libonig-dev \
+    oniguruma \
+    oniguruma-dev \
     libxml2 \
     libxml2-dev \
     postgresql-libs \
     postgresql-dev \
-    redis \
-    redis-dev \
     zip \
     unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -36,16 +34,21 @@ RUN apk add --no-cache \
     pcntl \
     bcmath \
     gd \
-    redis \
     && apk del --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
-    libonig-dev \
+    oniguruma-dev \
     libxml2-dev \
     postgresql-dev \
-    redis-dev \
     && rm -rf /var/cache/apk/*
+
+# PHP Redis extension (PECL; no apk package in Alpine)
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del --no-cache .build-deps \
+    && rm -rf /usr/local/lib/php/doc/redis /usr/local/lib/php/test/redis /tmp/*
 
 # Copy Composer from composer stage
 COPY --from=composer-stage /usr/bin/composer /usr/bin/composer
@@ -53,10 +56,13 @@ COPY --from=composer-stage /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files and install dependencies
+# Copy composer files and vendor
 COPY composer.json composer.lock ./
 COPY --from=composer-stage /app/vendor ./vendor
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+# --no-scripts: skip "php artisan package:discover" (needs app files); Laravel will discover at runtime
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative --no-scripts
 
 # Copy application files
 COPY . .

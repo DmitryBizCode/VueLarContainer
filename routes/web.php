@@ -9,6 +9,14 @@ Route::get('/', function () {
     return Inertia::render('HomePage');
 });
 
+Route::get('/services', function () {
+    return Inertia::render('ServicesPage');
+})->name('services');
+
+Route::get('/contact', function () {
+    return Inertia::render('ContactPage');
+})->name('contact');
+
 Route::get('/test-vue', function () {
     return Inertia::render('TestVue');
 })->name('test.vue');

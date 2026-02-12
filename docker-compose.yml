@@ -57,7 +57,7 @@ services:
     volumes:
       - ./:/var/www/html
       - /var/www/html/node_modules
-    command: sh -c "if [ ! -d node_modules ]; then npm install; fi && npm run dev -- --host"
+    command: sh -c "if [ ! -f node_modules/.package-lock.json ]; then npm install; fi && npm run dev -- --host"
     ports:
       - "${VITE_PORT:-5173}:5173"
     networks:
