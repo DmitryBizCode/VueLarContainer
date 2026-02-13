@@ -73,6 +73,25 @@ const socialLinks = ref([
     { name: 'LinkedIn', url: 'https://www.linkedin.com', icon: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z M2 9h4v12H2z M4 2a2 2 0 100 4 2 2 0 000-4z' },
 ]);
 
+const highlights = ref([
+    {
+        label: 'Dedicated Account Manager',
+        description: 'Every client gets a personal logistics expert — one point of contact from quote to delivery.',
+        icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+    },
+    {
+        label: 'Average Response Time',
+        value: '< 4 hours',
+        description: 'Our team replies within 4 hours on business days, including custom quote requests.',
+        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    },
+    {
+        label: 'Languages We Speak',
+        description: 'Ukrainian, English, German, Polish, Turkish — communicate in the language you prefer.',
+        icon: 'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129',
+    },
+]);
+
 const handleSubmit = () => {
     console.log('Form submitted:', form.value);
 };
@@ -194,10 +213,10 @@ const handleSubmit = () => {
             </div>
         </section>
 
-        <!-- About Us Section -->
-        <section class="py-16 bg-gradient-to-b from-white via-gray-50/50 to-gray-50">
+        <!-- About Us — Light Section -->
+        <section class="py-12 bg-gradient-to-b from-white via-gray-50/50 to-gray-50">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-12">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-4">
                         <span class="text-blue-600 text-sm font-semibold">Who We Are</span>
                     </div>
@@ -211,27 +230,22 @@ const handleSubmit = () => {
                     <div
                         v-for="(card, index) in aboutCards"
                         :key="index"
-                        class="group relative bg-white rounded-2xl overflow-hidden border-2 border-gray-100 hover:border-blue-600 hover:shadow-lg transition-all duration-300"
+                        class="group relative bg-white rounded-2xl p-6 border-2 border-gray-100 hover:border-blue-600 hover:shadow-lg transition-all duration-300 overflow-hidden"
                     >
+                        <!-- Top accent line on hover -->
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-yellow-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
                         <!-- Watermark number -->
-                        <span class="absolute top-4 right-5 text-6xl font-black text-blue-900/[0.04] select-none pointer-events-none z-10">0{{ index + 1 }}</span>
-                        <div class="relative h-44 overflow-hidden">
-                            <img
-                                :src="card.image"
-                                :alt="card.title"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                            <div class="absolute inset-0 bg-gradient-to-t from-blue-900/70 to-transparent"></div>
-                            <div class="absolute bottom-3 left-4">
-                                <div class="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="card.icon" />
-                                    </svg>
+                        <span class="absolute top-3 right-4 text-6xl font-black text-blue-900/[0.04] select-none pointer-events-none">0{{ index + 1 }}</span>
+
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-gray-100 group-hover:border-blue-200 transition-colors flex-shrink-0">
+                                    <img :src="card.image" :alt="card.title" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-900 transition-colors">{{ card.title }}</h3>
                                 </div>
                             </div>
-                        </div>
-                        <div class="p-6">
-                            <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-900 transition-colors">{{ card.title }}</h3>
                             <p class="text-gray-600 text-sm leading-relaxed">{{ card.description }}</p>
                         </div>
                     </div>
@@ -239,50 +253,60 @@ const handleSubmit = () => {
             </div>
         </section>
 
-        <!-- Contact Form Section -->
-        <section id="form" class="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <!-- Contact Form + Office Info -->
+        <section id="form" class="py-12 bg-gradient-to-b from-gray-50 to-white">
             <div class="container mx-auto px-6">
-                <div class="max-w-4xl mx-auto">
-                    <div class="grid lg:grid-cols-5 gap-8">
+                <div class="max-w-5xl mx-auto">
+                    <div class="grid lg:grid-cols-2 gap-10">
 
-                        <!-- Form — 3 columns -->
-                        <div class="lg:col-span-3">
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-full">
-                                    <span class="text-blue-600 text-sm font-semibold">Write to Us</span>
-                                </div>
-                                <div class="h-px flex-1 bg-gradient-to-r from-blue-200 to-transparent"></div>
-                            </div>
-                            <h2 class="text-3xl font-bold text-gray-900 mb-6">Send a Message</h2>
+                        <!-- Left: Form -->
+                        <div class="bg-white rounded-2xl p-7 border border-gray-200 shadow-sm">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-1">Send a Message</h2>
+                            <p class="text-sm text-gray-500 mb-6">We'll get back to you within one business day.</p>
 
                             <form @submit.prevent="handleSubmit" class="space-y-4">
                                 <div class="grid sm:grid-cols-2 gap-4">
                                     <div>
                                         <label for="name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Name</label>
-                                        <input
-                                            type="text" id="name" v-model="form.name"
-                                            placeholder="John Doe" required
-                                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 outline-none"
-                                        />
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                            </div>
+                                            <input
+                                                type="text" id="name" v-model="form.name"
+                                                placeholder="John Doe" required
+                                                class="w-full bg-gray-50/80 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="email" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
-                                        <input
-                                            type="email" id="email" v-model="form.email"
-                                            placeholder="john@company.com" required
-                                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 outline-none"
-                                        />
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                            </div>
+                                            <input
+                                                type="email" id="email" v-model="form.email"
+                                                placeholder="john@company.com" required
+                                                class="w-full bg-gray-50/80 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="subject" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
-                                    <select
-                                        id="subject" v-model="form.subject" required
-                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 outline-none appearance-none"
-                                    >
-                                        <option value="" disabled>Select a subject</option>
-                                        <option v-for="subject in subjects" :key="subject" :value="subject">{{ subject }}</option>
-                                    </select>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                        </div>
+                                        <select
+                                            id="subject" v-model="form.subject" required
+                                            class="w-full bg-gray-50/80 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none appearance-none"
+                                        >
+                                            <option value="" disabled>Select a subject</option>
+                                            <option v-for="subject in subjects" :key="subject" :value="subject">{{ subject }}</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <label for="message" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Message</label>
@@ -290,88 +314,44 @@ const handleSubmit = () => {
                                         id="message" v-model="form.message" rows="5"
                                         placeholder="Tell us about your logistics needs..."
                                         required
-                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 outline-none resize-none"
+                                        class="w-full bg-gray-50/80 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none resize-none"
                                     ></textarea>
                                 </div>
                                 <button
                                     type="submit"
-                                    class="w-full px-8 py-3.5 bg-blue-900 text-white font-bold text-sm rounded-lg hover:bg-blue-800 transition-colors shadow-lg"
+                                    class="w-full px-8 py-3.5 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-sm rounded-xl hover:from-blue-800 hover:to-blue-700 transition-all shadow-lg shadow-blue-900/20"
                                 >
                                     Send Message
                                 </button>
                             </form>
                         </div>
 
-                        <!-- Quick info sidebar — 2 columns -->
-                        <div class="lg:col-span-2 space-y-4">
-                            <!-- Mobile only: contact info (hidden on lg since hero has it) -->
-                            <div class="lg:hidden bg-white rounded-2xl p-6 border border-gray-200 space-y-3">
-                                <div
-                                    v-for="(info, index) in officeInfo"
-                                    :key="index"
-                                    class="flex items-center gap-3"
-                                >
-                                    <div class="flex-shrink-0 w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                                        <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="info.icon" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{{ info.label }}</div>
-                                        <div class="text-gray-900 font-medium text-sm">{{ info.value }}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Office photo card -->
-                            <div class="relative rounded-2xl overflow-hidden border border-gray-200">
-                                <img src="/image/cont1.jpg" alt="Our Office" class="w-full h-48 object-cover" />
+                        <!-- Right: Why contact us -->
+                        <div class="space-y-4">
+                            <!-- Office photo -->
+                            <div class="relative rounded-2xl overflow-hidden">
+                                <img src="/image/cont1.jpg" alt="Our Office" class="w-full h-44 object-cover" />
                                 <div class="absolute inset-0 bg-gradient-to-t from-blue-900/80 via-blue-900/20 to-transparent"></div>
-                                <div class="absolute bottom-4 left-4 right-4">
-                                    <div class="text-white text-sm font-bold">Logistics Co. HQ</div>
+                                <div class="absolute bottom-4 left-5">
+                                    <div class="text-white font-bold">Logistics Co. HQ</div>
                                     <div class="text-blue-200/80 text-xs">Kyiv, Ukraine · Since 2004</div>
                                 </div>
                             </div>
 
-                            <!-- Quick stats -->
-                            <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl p-5 text-white">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="text-center p-3 bg-white/5 rounded-xl border border-white/10">
-                                        <div class="text-2xl font-bold text-yellow-400">20+</div>
-                                        <div class="text-blue-200/60 text-xs mt-0.5">Years</div>
-                                    </div>
-                                    <div class="text-center p-3 bg-white/5 rounded-xl border border-white/10">
-                                        <div class="text-2xl font-bold text-yellow-400">100K+</div>
-                                        <div class="text-blue-200/60 text-xs mt-0.5">Clients</div>
-                                    </div>
-                                    <div class="text-center p-3 bg-white/5 rounded-xl border border-white/10">
-                                        <div class="text-2xl font-bold text-yellow-400">50+</div>
-                                        <div class="text-blue-200/60 text-xs mt-0.5">Ports</div>
-                                    </div>
-                                    <div class="text-center p-3 bg-white/5 rounded-xl border border-white/10">
-                                        <div class="text-2xl font-bold text-yellow-400">24/7</div>
-                                        <div class="text-blue-200/60 text-xs mt-0.5">Monitoring</div>
-                                    </div>
+                            <!-- Highlights -->
+                            <div
+                                v-for="(item, index) in highlights"
+                                :key="index"
+                                class="group flex gap-3.5 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-200 transition-all duration-300"
+                            >
+                                <div class="flex-shrink-0 w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center mt-0.5">
+                                    <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
+                                    </svg>
                                 </div>
-                            </div>
-
-                            <!-- Social links row -->
-                            <div class="flex items-center justify-between bg-white rounded-2xl p-4 border border-gray-200">
-                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Follow Us</span>
-                                <div class="flex gap-2">
-                                    <a
-                                        v-for="(social, index) in socialLinks"
-                                        :key="index"
-                                        :href="social.url"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="w-9 h-9 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center text-gray-500 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition-all duration-300"
-                                        :title="social.name"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path :d="social.icon" />
-                                        </svg>
-                                    </a>
+                                <div>
+                                    <div class="text-sm font-bold text-gray-900 mb-0.5 group-hover:text-blue-900 transition-colors">{{ item.label }}</div>
+                                    <p class="text-xs text-gray-500 leading-relaxed">{{ item.description }}</p>
                                 </div>
                             </div>
                         </div>

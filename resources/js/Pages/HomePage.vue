@@ -123,7 +123,7 @@ const processes = ref([
         <Head title="Global Container Shipping & Logistics" />
 
         <!-- Hero Section - Asymmetric Design -->
-        <section class="relative min-h-[88vh] flex items-center overflow-hidden bg-blue-900">
+        <section class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900">
             <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-yellow-400/10 to-transparent"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-800 rounded-full blur-3xl opacity-50"></div>
             <!-- Subtle grid pattern overlay -->
@@ -218,9 +218,9 @@ const processes = ref([
         </section>
 
         <!-- Services Section - Modern Cards -->
-        <section class="py-16 bg-gradient-to-b from-white via-gray-50/50 to-gray-50 transition-all duration-700 ease-in-out">
+        <section class="py-12 bg-gradient-to-b from-white via-gray-50/50 to-gray-50 transition-all duration-700 ease-in-out">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-16">
+                <div class="text-center mb-10">
                     <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full mb-4">
                         <div class="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                         <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Core Services</span>
@@ -273,7 +273,7 @@ const processes = ref([
         </section>
 
         <!-- Image & Content - Split Design -->
-        <section id="services" class="py-16 bg-gradient-to-b from-gray-50 via-gray-50/50 to-white transition-all duration-700 ease-in-out">
+        <section id="services" class="py-12 bg-gradient-to-b from-gray-50 via-gray-50/50 to-white transition-all duration-700 ease-in-out">
             <div class="container mx-auto px-6">
                 <div class="grid lg:grid-cols-2 gap-16 items-center">
                     <div class="lg:order-2">
@@ -384,9 +384,9 @@ const processes = ref([
         </section>
 
         <!-- Logistics Info - Staggered Layout -->
-        <section class="py-16 bg-gradient-to-b from-white via-gray-50/50 to-gray-50 transition-all duration-700 ease-in-out">
+        <section class="py-12 bg-gradient-to-b from-white via-gray-50/50 to-gray-50 transition-all duration-700 ease-in-out">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-16">
+                <div class="text-center mb-10">
                     <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full mb-4">
                         <div class="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                         <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Knowledge Base</span>
@@ -424,10 +424,10 @@ const processes = ref([
         </section>
 
         <!-- Process - Timeline Design -->
-        <section class="py-16 bg-gradient-to-b from-gray-50 via-gray-50/50 to-white transition-all duration-700 ease-in-out relative overflow-hidden">
+        <section class="py-12 bg-gradient-to-b from-gray-50 via-gray-50/50 to-white transition-all duration-700 ease-in-out relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-yellow-50/20"></div>
             <div class="container mx-auto px-6 relative z-10">
-                <div class="text-center mb-16">
+                <div class="text-center mb-10">
                     <div class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400/20 border border-yellow-400/30 rounded-full mb-4">
                         <div class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
                         <span class="text-yellow-600 text-sm font-semibold">Our Workflow</span>
@@ -494,12 +494,12 @@ const processes = ref([
         </section>
 
         <!-- Benefits - Grid with Images -->
-        <section class="py-16 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white relative overflow-hidden transition-all duration-700 ease-in-out">
+        <section class="py-12 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white relative overflow-hidden transition-all duration-700 ease-in-out">
             <div class="absolute top-0 right-0 w-96 h-96 bg-yellow-400/15 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
             
             <div class="relative container mx-auto px-6 z-10">
-                <div class="text-center mb-16">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/30 rounded-full mb-4">
                         <span class="text-yellow-400 text-sm font-medium">Trusted Partnership</span>
                     </div>

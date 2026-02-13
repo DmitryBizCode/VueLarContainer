@@ -314,9 +314,9 @@ const certifications = ref([
         </section>
 
         <!-- Countries Section -->
-        <section id="countries" class="py-16 bg-gradient-to-b from-white via-gray-50/50 to-gray-50">
+        <section id="countries" class="py-12 bg-gradient-to-b from-white via-gray-50/50 to-gray-50">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-14">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-4">
                         <span class="text-blue-600 text-sm font-semibold">Global Network</span>
                     </div>
@@ -402,9 +402,9 @@ const certifications = ref([
         </section>
 
         <!-- Container Fleet Section -->
-        <section class="py-16 bg-gradient-to-b from-gray-50 via-white to-white">
+        <section class="py-12 bg-gradient-to-b from-gray-50 via-white to-white">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-14">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-4">
                         <span class="text-blue-600 text-sm font-semibold">Equipment</span>
                     </div>
@@ -452,10 +452,10 @@ const certifications = ref([
         </section>
 
         <!-- Order Process Section -->
-        <section class="py-16 bg-gradient-to-b from-white via-gray-50/30 to-gray-50 relative overflow-hidden">
+        <section class="py-12 bg-gradient-to-b from-white via-gray-50/30 to-gray-50 relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-transparent to-yellow-50/10"></div>
             <div class="container mx-auto px-6 relative z-10">
-                <div class="text-center mb-14">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-yellow-400/15 border border-yellow-400/25 rounded-full mb-4">
                         <span class="text-yellow-700 text-sm font-semibold">Step by Step</span>
                     </div>
@@ -529,7 +529,7 @@ const certifications = ref([
         </section>
 
         <!-- IoT Management Section -->
-        <section id="iot" class="py-16 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white relative overflow-hidden">
+        <section id="iot" class="py-12 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 text-white relative overflow-hidden">
             <!-- Subtle decorative elements (no animate-pulse) -->
             <div class="absolute top-0 right-0 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl"></div>
@@ -547,7 +547,7 @@ const certifications = ref([
             </div>
 
             <div class="relative container mx-auto px-6 z-10">
-                <div class="text-center mb-14">
+                <div class="text-center mb-10">
                     <div class="inline-block px-4 py-2 bg-yellow-400/15 backdrop-blur-sm border border-yellow-400/25 rounded-full mb-4">
                         <span class="text-yellow-400 text-sm font-medium">Advanced Technology</span>
                     </div>
@@ -667,7 +667,7 @@ const certifications = ref([
         </section>
 
         <!-- CTA Section -->
-        <section class="py-16 bg-gradient-to-b from-white to-gray-50">
+        <section class="py-12 bg-gradient-to-b from-white to-gray-50">
             <div class="container mx-auto px-6">
                 <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 rounded-2xl overflow-hidden">
                     <div class="py-14 px-8 md:px-16 text-center">
