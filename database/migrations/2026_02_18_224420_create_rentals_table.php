@@ -13,6 +13,16 @@ return new class extends Migration
     {
         Schema::create('rentals', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('restrict');;
+            $table->foreignId('container_id')->constrained()->onDelete('restrict');;
+            $table->timestamp('start_date')->useCurrent();
+            $table->timestamp('end_date')->nullable();
+            $table->timestamp('actual_return_date')->nullable();
+            $table->decimal('price',15,2)->default(0.00);
+            $table->string('status',50)->default('active');
+            $table->string('payment_status',50)->default('unpaid');
+            $table->string('contract_pdf')->nullable();
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }

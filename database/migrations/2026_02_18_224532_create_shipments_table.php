@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('shipments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('vessel_id')->constrained();
+            $table->foreignId('route_id')->constrained();
+            $table->timestamp('departure_date');
+            $table->timestamp('arrival_date');
+            $table->timestamp('actual_departure_date')->nullable();
+            $table->timestamp('actual_arrival_date')->nullable();
+            $table->string('tracking_number',50)->unique();
+            $table->string('status',50)->default('scheduled');
             $table->timestamps();
         });
     }

@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('routes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('origin_port_id')->constrained('ports');
+            $table->foreignId('destination_port_id')->constrained('ports');
+            $table->integer('estimated_days');
+            $table->float('distance')->default(0.00);
+            $table->string('route_status',50)->default('open');
             $table->timestamps();
         });
     }
