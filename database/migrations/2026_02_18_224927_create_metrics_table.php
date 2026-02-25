@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('metrics', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->foreignId('container_id')->constrained()->cascadeOnDelete();
+            $table->string('type',50);
+            $table->decimal('value', 12, 4)->default(0.0000);
+            $table->string('unit', 100)->nullable();
+            $table->timestamp('recorded_at')->useCurrent();
         });
     }
 

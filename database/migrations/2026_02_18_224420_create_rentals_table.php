@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('rentals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('restrict');;
-            $table->foreignId('container_id')->constrained()->onDelete('restrict');;
+            $table->foreignId('user_id')->constrained()->onDelete('restrict');
+            $table->foreignId('container_id')->constrained()->onDelete('restrict');
             $table->timestamp('start_date')->useCurrent();
             $table->timestamp('end_date')->nullable();
             $table->timestamp('actual_return_date')->nullable();

@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('rental_id')->constrained()->cascadeOnDelete();
+            $table->decimal('amount', 15, 2)->default(0.00);
+            $table->string('currency',10)->default('USD');
+            $table->string('status', 50)->default('pending');
+            $table->string('external_provider_id',100)->nullable();
+            $table->text('refund_reason')->nullable();
+            $table->timestamp('transaction_date')->useCurrent();
+            $table->string('payment_method',50)->default('card');
             $table->timestamps();
         });
     }

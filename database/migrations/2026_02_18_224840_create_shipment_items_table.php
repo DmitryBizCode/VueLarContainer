@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('shipment_items', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('shipment_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('container_id')->constrained();
+            $table->foreignId('rental_id')->nullable()->constrained();
+            $table->timestamp('loaded_at')->useCurrent();
+            $table->string('condition_on_arrival', 50)->default('good');
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

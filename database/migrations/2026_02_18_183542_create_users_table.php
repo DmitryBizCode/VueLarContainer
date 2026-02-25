@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('photo')->nullable();
             $table->string('account_status',50)->default('pending_verification');
             $table->string('role',50)->default('client');
+            $table->foreignId('country_id')->constrained();
             $table->timestamps();
             $table->softDeletes();
         });

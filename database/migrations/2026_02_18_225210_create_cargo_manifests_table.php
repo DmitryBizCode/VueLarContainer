@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('cargo_manifests', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('rental_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('hs_code',20)->nullable();
+            $table->decimal('weight_kg',12,2);
+            $table->decimal('volume_m3',10,2)->nullable();
+            $table->boolean('is_dangerous')->default(false);
+            $table->decimal('declared_value',15,2)->nullable();
             $table->timestamps();
         });
     }
