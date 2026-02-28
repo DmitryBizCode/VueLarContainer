@@ -6,5 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
-    //
+    protected $fillable = [
+        'rental_id',
+        'amount',
+        'currency',
+        'status',
+        'external_provider_id',
+        'refund_reason',
+        'transaction_date',
+        'payment_method',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'transaction_date' => 'datetime',
+    ];
 }

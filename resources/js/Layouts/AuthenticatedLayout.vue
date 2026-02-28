@@ -1,198 +1,134 @@
 <script setup>
-import { ref } from 'vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import AppSidebar from '@/Components/AppSidebar.vue';
+import AppTopbar from '@/Components/AppTopbar.vue';
+import { useQuickActions } from '@/composables/useQuickActions';
+import { computed, onMounted, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
-const showingNavigationDropdown = ref(false);
+const SIDEBAR_STORAGE_KEY = 'auth-shell-sidebar-collapsed';
+
+const getInitialSidebarCollapsed = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
+};
+
+const page = usePage();
+const mobileSidebarOpen = ref(false);
+const sidebarCollapsed = ref(getInitialSidebarCollapsed());
+const transitionsReady = ref(false);
+
+const { quickActions } = useQuickActions();
+
+const user = computed(() => page.props.auth?.user || null);
+const userInitials = computed(() => {
+    if (!user.value) {
+        return 'U';
+    }
+
+    return [user.value.first_name?.[0], user.value.last_name?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
+});
+
+const userName = computed(() => {
+    if (!user.value) {
+        return 'User';
+    }
+
+    return [user.value.first_name, user.value.last_name].filter(Boolean).join(' ').trim() || user.value.email;
+});
+
+const desktopSidebarClass = computed(() => (sidebarCollapsed.value ? 'w-20' : 'w-72'));
+
+const toggleSidebarCollapsed = () => {
+    sidebarCollapsed.value = !sidebarCollapsed.value;
+};
+
+const openMobileSidebar = () => {
+    mobileSidebarOpen.value = true;
+};
+
+const closeMobileSidebar = () => {
+    mobileSidebarOpen.value = false;
+};
+
+onMounted(() => {
+    transitionsReady.value = true;
+});
+
+watch(sidebarCollapsed, (value) => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, value ? '1' : '0');
+});
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
+    <div class="min-h-screen bg-slate-50">
+        <div
+            class="fixed inset-0 z-50 bg-slate-950/40 transition-opacity duration-200 lg:hidden"
+            :class="mobileSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'"
+            @click="closeMobileSidebar"
+        />
+
+        <div class="fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 lg:hidden" :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+            <AppSidebar
+                :quick-actions="quickActions"
+                :collapsed="false"
+                :user-name="userName"
+                :user-email="user?.email || ''"
+                :user-initials="userInitials"
+                mobile
+                @close-mobile="closeMobileSidebar"
+            />
+        </div>
+
+        <div class="relative flex min-h-screen bg-white">
+            <div
+                class="relative z-20 hidden self-start lg:sticky lg:top-4 lg:block"
+                :class="[desktopSidebarClass, transitionsReady ? 'transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]' : 'transition-none']"
             >
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
-                                </Link>
-                            </div>
+                <AppSidebar
+                    :quick-actions="quickActions"
+                    :collapsed="sidebarCollapsed"
+                    :user-name="userName"
+                    :user-email="user?.email || ''"
+                    :user-initials="userInitials"
+                />
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
-
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Responsive Navigation Menu -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
+                <button
+                    type="button"
+                    class="group absolute right-1 top-24 z-30 inline-flex h-16 w-5 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-b from-white to-slate-100 text-slate-500 shadow-sm shadow-slate-300/60 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:h-20 hover:w-6 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    @click="toggleSidebarCollapsed"
                 >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
+                    <span class="sr-only">Toggle sidebar</span>
+                    <svg class="h-3 w-3 transition-transform duration-300" :class="sidebarCollapsed ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M12.78 4.22a.75.75 0 010 1.06L8.06 10l4.72 4.72a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="min-w-0 flex-1 bg-white">
+                <AppTopbar
+                    :user-name="userName"
+                    :user-email="user?.email || ''"
+                    :user-initials="userInitials"
+                    @toggle-mobile-sidebar="openMobileSidebar"
+                />
+
+                <header class="border-b border-slate-200 bg-white/80" v-if="$slots.header">
+                    <div class="px-4 py-6 sm:px-6 lg:px-8">
+                        <slot name="header" />
                     </div>
+                </header>
 
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
-                        <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
-                                {{ $page.props.auth.user.name }}
-                            </div>
-                            <div class="text-sm font-medium text-gray-500">
-                                {{ $page.props.auth.user.email }}
-                            </div>
-                        </div>
-
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
-
-            <!-- Page Content -->
-            <main>
-                <slot />
-            </main>
+                <main class="px-0 pb-10">
+                    <slot />
+                </main>
+            </div>
         </div>
     </div>
 </template>

@@ -12,13 +12,22 @@ defineProps({
     status: {
         type: String,
     },
+    countries: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const user = usePage().props.auth.user;
 
 const form = useForm({
-    name: user.name,
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
     email: user.email,
+    phone_number: user.phone_number || '',
+    company_name: user.company_name || '',
+    address: user.address || '',
+    country_id: user.country_id || null,
 });
 </script>
 
@@ -39,19 +48,34 @@ const form = useForm({
             class="mt-6 space-y-6"
         >
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="first_name" value="First name" />
 
                 <TextInput
-                    id="name"
+                    id="first_name"
                     type="text"
                     class="mt-1 block w-full"
-                    v-model="form.name"
+                    v-model="form.first_name"
                     required
                     autofocus
-                    autocomplete="name"
+                    autocomplete="given-name"
                 />
 
-                <InputError class="mt-2" :message="form.errors.name" />
+                <InputError class="mt-2" :message="form.errors.first_name" />
+            </div>
+
+            <div>
+                <InputLabel for="last_name" value="Last name" />
+
+                <TextInput
+                    id="last_name"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.last_name"
+                    required
+                    autocomplete="family-name"
+                />
+
+                <InputError class="mt-2" :message="form.errors.last_name" />
             </div>
 
             <div>
@@ -67,6 +91,65 @@ const form = useForm({
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div>
+                <InputLabel for="phone_number" value="Phone number" />
+
+                <TextInput
+                    id="phone_number"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.phone_number"
+                    autocomplete="tel"
+                />
+
+                <InputError class="mt-2" :message="form.errors.phone_number" />
+            </div>
+
+            <div>
+                <InputLabel for="company_name" value="Company name" />
+
+                <TextInput
+                    id="company_name"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.company_name"
+                    autocomplete="organization"
+                />
+
+                <InputError class="mt-2" :message="form.errors.company_name" />
+            </div>
+
+            <div>
+                <InputLabel for="address" value="Address" />
+
+                <TextInput
+                    id="address"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.address"
+                    autocomplete="street-address"
+                />
+
+                <InputError class="mt-2" :message="form.errors.address" />
+            </div>
+
+            <div>
+                <InputLabel for="country_id" value="Country" />
+
+                <select
+                    id="country_id"
+                    v-model="form.country_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                    <option :value="null">Select country</option>
+                    <option v-for="country in countries" :key="country.id" :value="country.id">
+                        {{ country.name }}
+                    </option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.country_id" />
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">

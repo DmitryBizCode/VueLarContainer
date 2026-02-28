@@ -158,7 +158,7 @@ const handleSubmit = () => {
                                         class="flex items-center gap-4 p-3.5 bg-blue-800/40 rounded-xl border border-blue-700/20"
                                     >
                                         <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center border border-white/10">
-                                            <svg class="w-4.5 h-4.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="info.icon" />
                                             </svg>
                                         </div>
@@ -200,7 +200,7 @@ const handleSubmit = () => {
                                             class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-blue-200/70 hover:bg-yellow-400 hover:text-blue-900 transition-all duration-200"
                                             :title="social.name"
                                         >
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                                                 <path :d="social.icon" />
                                             </svg>
                                         </a>

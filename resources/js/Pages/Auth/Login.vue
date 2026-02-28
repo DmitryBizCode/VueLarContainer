@@ -2,8 +2,6 @@
 import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
@@ -37,14 +35,19 @@ const submit = () => {
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-slate-900">Sign in to continue</h2>
+            <p class="mt-1 text-sm text-slate-500">Use your company account to access dashboard and logistics operations.</p>
+        </div>
+
+        <form @submit.prevent="submit" class="space-y-4">
             <div>
-                <InputLabel for="email" value="Email" />
+                <label for="email" class="block text-sm font-semibold text-slate-700">Email</label>
 
                 <TextInput
                     id="email"
                     type="email"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full rounded-xl border-slate-300 bg-slate-50/60 text-slate-900 focus:border-blue-500 focus:ring-blue-500"
                     v-model="form.email"
                     required
                     autofocus
@@ -54,13 +57,13 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+            <div>
+                <label for="password" class="block text-sm font-semibold text-slate-700">Password</label>
 
                 <TextInput
                     id="password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full rounded-xl border-slate-300 bg-slate-50/60 text-slate-900 focus:border-blue-500 focus:ring-blue-500"
                     v-model="form.password"
                     required
                     autocomplete="current-password"
@@ -69,32 +72,35 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
-                <label class="flex items-center">
+            <div class="flex items-center justify-between">
+                <label class="flex items-center text-sm text-slate-600">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+                    <span class="ms-2">Remember me</span>
                 </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    class="text-sm font-semibold text-blue-700 transition hover:text-blue-900"
                 >
                     Forgot your password?
                 </Link>
+            </div>
 
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
+            <button
+                    type="submit"
+                    class="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                    :class="{ 'opacity-70': form.processing }"
                     :disabled="form.processing"
                 >
                     Log in
-                </PrimaryButton>
-            </div>
+            </button>
+
+            <p class="text-center text-sm text-slate-500">
+                No account yet?
+                <Link :href="route('register')" class="font-semibold text-blue-700 hover:text-blue-900">
+                    Create one
+                </Link>
+            </p>
         </form>
     </GuestLayout>
 </template>
