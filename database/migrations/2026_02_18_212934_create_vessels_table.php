@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('vessels', function (Blueprint $table) {
             $table->id();
-            $table->string('name',100);
+            $table->string('name', 100);
             $table->string('imo_number', 20)->unique();
             $table->integer('capacity_teu');
-            $table->string('status',50)->default('active');
+            $table->string('status', 50)->default('active');
+            $table->foreignId('current_port_id')->nullable()->constrained('ports')->nullOnDelete();
             $table->date('last_inspection_date')->nullable();
             $table->timestamps();
             $table->softDeletes();

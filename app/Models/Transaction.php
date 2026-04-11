@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
@@ -21,4 +22,9 @@ class Transaction extends Model
         'amount' => 'decimal:2',
         'transaction_date' => 'datetime',
     ];
+
+    public function rental(): BelongsTo
+    {
+        return $this->belongsTo(Rental::class);
+    }
 }

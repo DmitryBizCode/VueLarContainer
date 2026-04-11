@@ -28,6 +28,10 @@ defineProps({
         type: String,
         default: 'U',
     },
+    userPhotoUrl: {
+        type: String,
+        default: null,
+    },
 });
 
 defineEmits(['close-mobile']);
@@ -72,7 +76,16 @@ defineEmits(['close-mobile']);
                     class="flex items-center"
                     :class="collapsed && !mobile ? '' : 'gap-3'"
                 >
-                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white">
+                    <img
+                        v-if="userPhotoUrl"
+                        :src="userPhotoUrl"
+                        :alt="userName"
+                        class="h-10 w-10 shrink-0 rounded-xl object-cover"
+                    />
+                    <span
+                        v-else
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white"
+                    >
                         {{ userInitials }}
                     </span>
                     <div

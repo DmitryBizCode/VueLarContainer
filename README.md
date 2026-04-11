@@ -58,3 +58,64 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 # VueLarContainer
+
+## Docker: перший запуск
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose exec php php artisan key:generate
+docker compose exec php php artisan migrate --force
+docker compose exec php php artisan db:seed
+```
+
+- Додаток: `http://localhost` (порт змінюється через `NGINX_HTTP_PORT` у `.env`)
+- Vite: `http://localhost:5173`
+- Після `db:seed` можна увійти як **`demo@example.com`** / **`password`** (клієнт; оренди створюються через форму заявки, IoT Monitor доступний лише після апруву адміном) або як адмін із `DemoAccountSeeder` (наприклад **`romeobackend@gmail.com`** / **`123456789`**).
+
+Повністю скинути БД і named volumes (дані в Postgres зникають):
+
+```bash
+docker compose down -v --remove-orphans
+docker compose up -d --build
+docker compose exec php php artisan migrate --force
+docker compose exec php php artisan db:seed
+```
+
+Без сідерів: пропусти останній рядок або заміни на `php artisan migrate --force` лише.
+
+## IoT simulation: schedule vs worker
+
+Telemetry for IoT-active containers is generated outside the web request cycle. Use **one** of the following; do **not** run both to avoid duplicate ticks.
+
+### Option A: Scheduler (5-second ticks)
+
+The `simulation:tick` command is scheduled every 5 seconds. Sub-minute intervals require a long-running scheduler process:
+
+```bash
+php artisan schedule:work
+```
+
+Run this under **Supervisor** or **systemd** in production. The classic crontab `* * * * * php artisan schedule:run` runs only once per minute and **will not** execute 5-second tasks.
+
+**Docker:** run inside the PHP container: `docker compose exec php php artisan schedule:work` (or add it as a service in docker-compose).
+
+### Option B: Dedicated worker
+
+For continuous control without the scheduler:
+
+```bash
+php artisan simulation:worker
+```
+
+- **`--once`**: single pass (useful for CI or manual runs)
+- **`--container=ID`**: tick only one container
+- **`--interval=5`**: seconds between full passes (default from `SIMULATION_WORKER_SLEEP_SECONDS`)
+
+Run the worker under **Supervisor**, **systemd**, or Docker `command:` so it restarts on failure.
+
+**Important:** Without the scheduler or worker running, the IoT Monitor page will show synthetic/fallback data instead of real telemetry. Data is generated every 5 seconds when the worker/scheduler is active.
+
+Telemetry rows are stored in the **`metrics`** table (`type` = sensor key, e.g. `temperature_c`). If the DB fills but the monitor looks empty, see [docs/iot-metrics-troubleshooting.md](docs/iot-metrics-troubleshooting.md).
+
+**Docker:** The `docker-compose.yml` includes a `simulation` service that runs `simulation:worker` with a 5-second interval. Start it with `docker compose up -d` (it runs alongside php, nginx, etc.).

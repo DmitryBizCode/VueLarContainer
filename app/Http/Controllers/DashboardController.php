@@ -40,6 +40,102 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
+        $financialOverview = DB::table('transactions')
+            ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
+            ->where('rentals.user_id', $user->id)
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('paid','completed','succeeded','success') THEN transactions.amount ELSE 0 END), 0) as paid_amount,
+                COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('pending','processing') THEN transactions.amount ELSE 0 END), 0) as pending_amount,
+                COALESCE(SUM(CASE WHEN LOWER(transactions.status) = 'failed' THEN transactions.amount ELSE 0 END), 0) as failed_amount,
+                COUNT(CASE WHEN LOWER(transactions.status) IN ('pending','processing') THEN 1 END) as pending_count,
+                COUNT(CASE WHEN LOWER(transactions.status) = 'failed' THEN 1 END) as failed_count,
+                MAX(transactions.transaction_date) as last_transaction_at
+            ")
+            ->first();
+
+        $shipmentOverview = DB::table('shipments')
+            ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
+            ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
+            ->where('rentals.user_id', $user->id)
+            ->selectRaw("
+                COUNT(DISTINCT CASE WHEN LOWER(shipments.status) IN ('scheduled','in_progress','in_transit') THEN shipments.id END) as in_transit_count,
+                COUNT(DISTINCT CASE WHEN shipments.arrival_date BETWEEN ? AND ? AND shipments.actual_arrival_date IS NULL THEN shipments.id END) as upcoming_arrivals_count,
+                COUNT(DISTINCT CASE WHEN shipments.arrival_date < ? AND shipments.actual_arrival_date IS NULL THEN shipments.id END) as delayed_count,
+                COUNT(DISTINCT CASE WHEN shipments.actual_arrival_date >= ? THEN shipments.id END) as arrived_this_week_count
+            ", [
+                $now = Carbon::now(),
+                $now->copy()->addDays(7),
+                $now,
+                $now->copy()->subDays(7),
+            ])
+            ->first();
+
+        $incidentOverview = DB::table('incidents')
+            ->leftJoin('shipment_items as si_sh', 'si_sh.shipment_id', '=', 'incidents.shipment_id')
+            ->leftJoin('rentals as rental_by_sh', 'rental_by_sh.id', '=', 'si_sh.rental_id')
+            ->leftJoin('rentals as rental_by_ct', 'rental_by_ct.container_id', '=', 'incidents.container_id')
+            ->where(function ($query) use ($user) {
+                $query
+                    ->where('rental_by_sh.user_id', $user->id)
+                    ->orWhere('rental_by_ct.user_id', $user->id);
+            })
+            ->selectRaw("
+                COUNT(DISTINCT CASE WHEN incidents.resolved_at IS NULL THEN incidents.id END) as open_count,
+                COUNT(DISTINCT CASE WHEN incidents.resolved_at IS NULL AND LOWER(incidents.severity) IN ('high','critical') THEN incidents.id END) as high_severity_open_count
+            ")
+            ->first();
+
+        $topRoutes = DB::table('shipments')
+            ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
+            ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
+            ->join('routes', 'routes.id', '=', 'shipments.route_id')
+            ->leftJoin('ports as origin_ports', 'origin_ports.id', '=', 'routes.origin_port_id')
+            ->leftJoin('ports as destination_ports', 'destination_ports.id', '=', 'routes.destination_port_id')
+            ->where('rentals.user_id', $user->id)
+            ->groupBy('origin_ports.name', 'destination_ports.name')
+            ->orderByDesc(DB::raw('COUNT(DISTINCT shipments.id)'))
+            ->selectRaw('origin_ports.name as origin_port_name, destination_ports.name as destination_port_name, COUNT(DISTINCT shipments.id) as shipments_count')
+            ->limit(3)
+            ->get();
+
+        $upcomingStarts = DB::table('rentals')
+            ->where('user_id', $user->id)
+            ->whereNotNull('start_date')
+            ->whereBetween('start_date', [Carbon::now(), Carbon::now()->copy()->addDays(10)])
+            ->select(['id', 'start_date'])
+            ->orderBy('start_date')
+            ->limit(3)
+            ->get()
+            ->map(fn ($row) => [
+                'id' => 'start-'.$row->id,
+                'type' => 'start',
+                'title' => 'Rental #'.$row->id.' starts',
+                'date' => $row->start_date,
+            ]);
+
+        $upcomingPayments = DB::table('rentals')
+            ->where('user_id', $user->id)
+            ->whereIn('payment_status', ['unpaid', 'pending'])
+            ->whereNotNull('end_date')
+            ->whereBetween('end_date', [Carbon::now(), Carbon::now()->copy()->addDays(10)])
+            ->select(['id', 'end_date'])
+            ->orderBy('end_date')
+            ->limit(3)
+            ->get()
+            ->map(fn ($row) => [
+                'id' => 'payment-'.$row->id,
+                'type' => 'payment',
+                'title' => 'Payment deadline for rental #'.$row->id,
+                'date' => $row->end_date,
+            ]);
+
+        $upcomingMilestones = collect()
+            ->concat($upcomingStarts)
+            ->concat($upcomingPayments)
+            ->sortBy('date')
+            ->take(5)
+            ->values();
+
         $latestPersistedNotifications = DB::table('notifications')
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
@@ -124,7 +220,7 @@ class DashboardController extends Controller
                     'done' => $done,
                 ])->values(),
                 'missingFields' => collect($profileChecklist)
-                    ->filter(fn ($done) => !$done)
+                    ->filter(fn ($done) => ! $done)
                     ->keys()
                     ->values(),
             ],
@@ -133,6 +229,26 @@ class DashboardController extends Controller
             'latestNotifications' => $latestNotifications,
             'recentActivities' => $recentActivities,
             'userCountryName' => $user->country?->name,
+            'financialOverview' => [
+                'paidAmount' => (float) ($financialOverview->paid_amount ?? 0),
+                'pendingAmount' => (float) ($financialOverview->pending_amount ?? 0),
+                'failedAmount' => (float) ($financialOverview->failed_amount ?? 0),
+                'pendingCount' => (int) ($financialOverview->pending_count ?? 0),
+                'failedCount' => (int) ($financialOverview->failed_count ?? 0),
+                'lastTransactionAt' => $financialOverview->last_transaction_at ?? null,
+            ],
+            'shipmentOverview' => [
+                'inTransitCount' => (int) ($shipmentOverview->in_transit_count ?? 0),
+                'upcomingArrivalsCount' => (int) ($shipmentOverview->upcoming_arrivals_count ?? 0),
+                'delayedCount' => (int) ($shipmentOverview->delayed_count ?? 0),
+                'arrivedThisWeekCount' => (int) ($shipmentOverview->arrived_this_week_count ?? 0),
+            ],
+            'incidentOverview' => [
+                'openCount' => (int) ($incidentOverview->open_count ?? 0),
+                'highSeverityOpenCount' => (int) ($incidentOverview->high_severity_open_count ?? 0),
+            ],
+            'topRoutes' => $topRoutes,
+            'upcomingMilestones' => $upcomingMilestones,
         ]);
     }
 
@@ -141,10 +257,10 @@ class DashboardController extends Controller
         return [
             'Full name' => filled($user->first_name) && filled($user->last_name),
             'Email' => filled($user->email),
-            'Email verification' => !is_null($user->email_verified_at),
+            'Email verification' => ! is_null($user->email_verified_at),
             'Phone' => filled($user->phone_number),
             'Address' => filled($user->address),
-            'Country' => !is_null($user->country_id),
+            'Country' => ! is_null($user->country_id),
             'Company' => filled($user->company_name),
         ];
     }

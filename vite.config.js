@@ -3,6 +3,17 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
+    optimizeDeps: {
+        // Pre-bundle echarts stack at dev server start so Monitor.vue doesn’t trigger
+        // on-demand optimize mid-session (stale chunk URLs in open tabs → 404).
+        include: [
+            'vue-echarts',
+            'echarts/core',
+            'echarts/charts',
+            'echarts/components',
+            'echarts/renderers',
+        ],
+    },
     plugins: [
         laravel({
             input: 'resources/js/app.js',

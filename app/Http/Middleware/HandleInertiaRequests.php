@@ -27,12 +27,36 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+    protected static function userPhotoUrl($user): ?string
+    {
+        if (! $user?->photo) {
+            return null;
+        }
+        $p = (string) $user->photo;
+        if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
+            return $p;
+        }
+        if (str_contains($p, '/')) {
+            return '/'.ltrim($p, '/');
+        }
+
+        return '/image/profile/'.$p;
+    }
+
     public function share(Request $request): array
     {
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge($request->user()->toArray(), [
+                    'role' => $request->user()->role ?? 'client',
+                    'photo_url' => static::userPhotoUrl($request->user()),
+                ]) : null,
+            ],
+            'flash' => [
+                'status' => $request->session()->get('status'),
+                'error' => $request->session()->get('error'),
+                'errors' => $request->session()->get('errors')?->getBag('default')->getMessages() ?? [],
             ],
         ];
     }

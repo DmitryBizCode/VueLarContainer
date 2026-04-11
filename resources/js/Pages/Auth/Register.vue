@@ -3,11 +3,20 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     countries: {
         type: Array,
         default: () => [],
+    },
+    detected_country_id: {
+        type: Number,
+        default: null,
+    },
+    detected_country_iso: {
+        type: String,
+        default: null,
     },
 });
 
@@ -15,9 +24,23 @@ const form = useForm({
     first_name: '',
     last_name: '',
     email: '',
-    country_id: '',
+    country_id: props.detected_country_id ? String(props.detected_country_id) : '',
     password: '',
     password_confirmation: '',
+});
+
+const selectedCountry = computed(() =>
+    props.countries.find((country) => String(country.id) === String(form.country_id)),
+);
+
+const selectedCountryFlag = computed(() => {
+    const iso = (selectedCountry.value?.iso_code || props.detected_country_iso || '').toUpperCase();
+
+    if (!/^[A-Z]{2}$/.test(iso)) {
+        return '';
+    }
+
+    return String.fromCodePoint(...iso.split('').map((char) => 127397 + char.charCodeAt(0)));
 });
 
 const submit = () => {
@@ -86,7 +109,16 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="country_id" class="block text-sm font-semibold text-slate-700">Country</label>
+                <div class="flex items-center justify-between gap-3">
+                    <label for="country_id" class="block text-sm font-semibold text-slate-700">Country</label>
+                    <span
+                        v-if="selectedCountryFlag"
+                        class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700"
+                    >
+                        <span class="text-base leading-none">{{ selectedCountryFlag }}</span>
+                        <span>{{ selectedCountry?.name ?? 'Detected' }}</span>
+                    </span>
+                </div>
 
                 <select
                     id="country_id"
@@ -96,7 +128,7 @@ const submit = () => {
                 >
                     <option value="" disabled>Select country</option>
                     <option v-for="country in props.countries" :key="country.id" :value="country.id">
-                        {{ country.name }}
+                        {{ country.iso_code }} - {{ country.name }}
                     </option>
                 </select>
 

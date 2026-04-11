@@ -110,3 +110,8 @@ html {
 * {
     -ms-overflow-style: none;
 }
+
+/* Select: відступ справа щоб іконка chevron не наїжджала на текст */
+select {
+    padding-right: 2rem !important;
+}

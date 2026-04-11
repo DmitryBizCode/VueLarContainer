@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Country;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,10 +22,20 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
+        $detectedCountryIso = $this->detectCountryIso(request());
+
+        $countries = Country::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'iso_code']);
+
+        $detectedCountryId = $detectedCountryIso
+            ? $countries->firstWhere('iso_code', $detectedCountryIso)?->id
+            : null;
+
         return Inertia::render('Auth/Register', [
-            'countries' => Country::query()
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'countries' => $countries,
+            'detected_country_iso' => $detectedCountryIso,
+            'detected_country_id' => $detectedCountryId,
         ]);
     }
 
@@ -55,6 +66,56 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        ActivityLogService::logAuth($user->id, 'registered', 'New user registration', $request);
+
         return redirect(route('dashboard', absolute: false));
+    }
+
+    private function detectCountryIso(Request $request): ?string
+    {
+        $cfCountry = strtoupper((string) $request->header('CF-IPCountry'));
+        if ($this->isValidCountryIso($cfCountry)) {
+            return $cfCountry;
+        }
+
+        $clientIp = $request->ip();
+        $endpoint = $this->shouldUseAutoIpLookup($clientIp)
+            ? 'https://ipapi.co/json/'
+            : "https://ipapi.co/{$clientIp}/json/";
+
+        try {
+            $payload = @file_get_contents($endpoint, false, stream_context_create([
+                'http' => ['timeout' => 2],
+            ]));
+
+            if ($payload === false) {
+                return null;
+            }
+
+            $payload = json_decode($payload, true);
+            $apiCountry = strtoupper((string) ($payload['country_code'] ?? ''));
+
+            return $this->isValidCountryIso($apiCountry) ? $apiCountry : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function shouldUseAutoIpLookup(?string $ip): bool
+    {
+        if (blank($ip)) {
+            return true;
+        }
+
+        return filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
+    }
+
+    private function isValidCountryIso(string $value): bool
+    {
+        return preg_match('/^[A-Z]{2}$/', $value) === 1;
     }
 }

@@ -1,6 +1,12 @@
 <script setup>
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const page = usePage();
+const isAdminContext = computed(() => (page.url || '').startsWith('/admin'));
+const profileHref = computed(() => (isAdminContext.value ? route('admin.profile.edit') : route('profile.edit')));
 
 defineProps({
     userName: {
@@ -15,13 +21,17 @@ defineProps({
         type: String,
         required: true,
     },
+    userPhotoUrl: {
+        type: String,
+        default: null,
+    },
 });
 
 defineEmits(['toggle-mobile-sidebar']);
 </script>
 
 <template>
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div class="flex h-16 items-center justify-between px-4 sm:px-5 lg:px-6">
             <div class="flex items-center gap-3">
                 <button
@@ -34,7 +44,7 @@ defineEmits(['toggle-mobile-sidebar']);
                         <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 100 2h12a1 1 0 100-2H4z" clip-rule="evenodd" />
                     </svg>
                 </button>
-                <div class="hidden sm:block">
+                <div class="hidden pl-1 sm:block lg:pl-3">
                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Operations panel</p>
                     <p class="text-sm font-semibold text-slate-700">Unified logistics workspace</p>
                 </div>
@@ -53,15 +63,24 @@ defineEmits(['toggle-mobile-sidebar']);
                         <span class="inline-flex rounded-md">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus:outline-none"
+                                class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:border-slate-500 hover:bg-slate-600 focus:outline-none"
                             >
-                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-700 to-slate-800 text-xs font-bold text-white">
+                                <img
+                                    v-if="userPhotoUrl"
+                                    :src="userPhotoUrl"
+                                    :alt="userName"
+                                    class="h-8 w-8 rounded-lg object-cover ring-1 ring-white/20"
+                                />
+                                <span
+                                    v-else
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-500/80 text-xs font-bold text-white"
+                                >
                                     {{ userInitials }}
                                 </span>
                                 <span class="hidden max-w-[160px] truncate text-left sm:inline-block">
                                     {{ userName }}
                                 </span>
-                                <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
+                                <svg class="h-4 w-4 text-slate-300" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </button>
@@ -74,7 +93,7 @@ defineEmits(['toggle-mobile-sidebar']);
                             <p class="mt-1 truncate text-sm font-semibold text-slate-800">{{ userName }}</p>
                             <p class="truncate text-xs text-slate-500">{{ userEmail }}</p>
                         </div>
-                        <DropdownLink :href="route('profile.edit')">
+                        <DropdownLink :href="profileHref">
                             Profile
                         </DropdownLink>
                         <div class="my-1 border-t border-slate-100"></div>

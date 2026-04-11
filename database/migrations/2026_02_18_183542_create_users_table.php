@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('first_name', 50);
-            $table->string('last_name',50);
-            $table->string('company_name',100)->nullable();
+            $table->string('last_name', 50);
+            $table->string('company_name', 100)->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
@@ -23,9 +23,12 @@ return new class extends Migration
             $table->string('phone_number', 20)->nullable();
             $table->string('address')->nullable();
             $table->string('photo')->nullable();
-            $table->string('account_status',50)->default('pending_verification');
-            $table->string('role',50)->default('client');
-            $table->foreignId('country_id')->constrained();
+            $table->string('account_status', 50)->default('pending_verification');
+            $table->string('role', 50)->default('client');
+            $table->decimal('commission_rate', 8, 4)->nullable();
+            $table->string('bonus_type', 20)->nullable();
+            $table->decimal('bonus_value', 12, 2)->nullable();
+            $table->foreignId('country_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });

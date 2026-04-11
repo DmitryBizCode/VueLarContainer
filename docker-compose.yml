@@ -84,6 +84,24 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
 
+  simulation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-laravel}_simulation
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: php artisan simulation:worker --interval=10
+    networks:
+      - laravel
+    depends_on:
+      - php
+      - postgres
+    env_file:
+      - .env
+
   redis:
     image: redis:7.2-alpine
     container_name: ${APP_NAME:-laravel}_redis

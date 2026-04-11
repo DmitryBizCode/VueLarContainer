@@ -5,13 +5,16 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -30,6 +33,9 @@ class User extends Authenticatable
         'account_status',
         'role',
         'country_id',
+        'commission_rate',
+        'bonus_type',
+        'bonus_value',
     ];
 
     /**
@@ -52,11 +58,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'commission_rate' => 'decimal:4',
+            'bonus_value' => 'decimal:2',
         ];
     }
 
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
+    }
+
+    public function rentals(): HasMany
+    {
+        return $this->hasMany(Rental::class);
     }
 }

@@ -41,6 +41,41 @@ const props = defineProps({
             missingFields: [],
         }),
     },
+    financialOverview: {
+        type: Object,
+        default: () => ({
+            paidAmount: 0,
+            pendingAmount: 0,
+            failedAmount: 0,
+            pendingCount: 0,
+            failedCount: 0,
+            lastTransactionAt: null,
+        }),
+    },
+    shipmentOverview: {
+        type: Object,
+        default: () => ({
+            inTransitCount: 0,
+            upcomingArrivalsCount: 0,
+            delayedCount: 0,
+            arrivedThisWeekCount: 0,
+        }),
+    },
+    incidentOverview: {
+        type: Object,
+        default: () => ({
+            openCount: 0,
+            highSeverityOpenCount: 0,
+        }),
+    },
+    topRoutes: {
+        type: Array,
+        default: () => [],
+    },
+    upcomingMilestones: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
@@ -61,6 +96,9 @@ const completionChecks = computed(() =>
         : []
 );
 const missingReadinessFields = computed(() => props.profileReadiness.missingFields ?? []);
+const operationalAttentionCount = computed(
+    () => Number(props.shipmentOverview.delayedCount || 0) + Number(props.incidentOverview.highSeverityOpenCount || 0)
+);
 
 const formatDate = (value) => {
     if (!value) return '—';
@@ -83,39 +121,11 @@ const formatMoney = (value) => {
 };
 
 const statusClass = (status) => {
-    const normalized = String(status || '').toLowerCase();
-
-    if (['completed', 'delivered', 'closed'].includes(normalized)) {
-        return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    }
-
-    if (['active', 'in_progress', 'scheduled'].includes(normalized)) {
-        return 'border-blue-200 bg-blue-50 text-blue-700';
-    }
-
-    if (['cancelled', 'failed', 'blocked'].includes(normalized)) {
-        return 'border-red-200 bg-red-50 text-red-700';
-    }
-
-    return 'border-slate-200 bg-slate-50 text-slate-600';
+    return 'border-slate-200 bg-slate-50 text-slate-700';
 };
 
 const notificationClass = (type) => {
-    const normalized = String(type || '').toLowerCase();
-
-    if (normalized === 'success') {
-        return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    }
-
-    if (normalized === 'warning') {
-        return 'border-amber-200 bg-amber-50 text-amber-700';
-    }
-
-    if (normalized === 'error') {
-        return 'border-rose-200 bg-rose-50 text-rose-700';
-    }
-
-    return 'border-blue-200 bg-blue-50 text-blue-700';
+    return 'border-slate-200 bg-slate-50 text-slate-700';
 };
 
 const notificationBadge = (type) => {
@@ -124,6 +134,79 @@ const notificationBadge = (type) => {
     if (normalized === 'warning') return 'Attention';
     if (normalized === 'success') return 'Update';
     return 'Info';
+};
+
+const milestoneBadgeClass = (type) => {
+    return 'border-slate-200 bg-slate-50 text-slate-700';
+};
+
+const markerState = (state) => {
+    const normalized = String(state || '').toLowerCase();
+
+    if (['error', 'failed', 'cancelled', 'blocked'].includes(normalized)) {
+        return 'failed';
+    }
+
+    if (['warning', 'pending', 'in_review', 'in progress', 'in_progress'].includes(normalized)) {
+        return 'pending';
+    }
+
+    if (['info', 'submitted', 'sent', 'queued'].includes(normalized)) {
+        return 'submitted';
+    }
+
+    if (['processing', 'in transit', 'in_transit'].includes(normalized)) {
+        return 'in_progress';
+    }
+
+    if (['expired', 'timeout', 'overdue'].includes(normalized)) {
+        return 'expired';
+    }
+
+    if (['success', 'completed', 'delivered', 'closed', 'active', 'scheduled'].includes(normalized)) {
+        return 'success';
+    }
+
+    return 'in_progress';
+};
+
+const markerIconPath = (state) => {
+    const kind = markerState(state);
+
+    if (kind === 'pending') {
+        return 'M8 2.75l6 10.5H2l6-10.5zm0 3.25a.75.75 0 0 0-.75.75v2.75a.75.75 0 1 0 1.5 0V6.75A.75.75 0 0 0 8 6zm0 6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8z';
+    }
+
+    if (kind === 'submitted') {
+        return 'M13.8 2.5 2.9 7.1c-.6.25-.58 1.11.03 1.34l3.15 1.17 1.17 3.16c.23.6 1.09.62 1.34.02L13.5 3.2c.23-.48-.22-.93-.7-.7z';
+    }
+
+    if (kind === 'success') {
+        return 'M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm2.35 3.95a.75.75 0 1 0-1.2-.9L7.55 7.7l-.72-.68a.75.75 0 1 0-1.04 1.08l1.35 1.3c.33.31.85.29 1.15-.06l2.06-2.89z';
+    }
+
+    if (kind === 'failed') {
+        return 'M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm-2.1 3.4a.75.75 0 0 0 0 1.06L6.94 8 5.9 9.04a.75.75 0 1 0 1.06 1.06L8 9.06l1.04 1.04a.75.75 0 0 0 1.06-1.06L9.06 8l1.04-1.04A.75.75 0 1 0 9.04 5.9L8 6.94 6.96 5.9a.75.75 0 0 0-1.06 0z';
+    }
+
+    if (kind === 'expired') {
+        return 'M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 1.5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm.75 1.5h-1.5v2.8c0 .2.08.39.22.53l1.7 1.7 1.06-1.06-1.48-1.48V5.5z';
+    }
+
+    return 'M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 1.5a4 4 0 1 0 0 8 4 4 0 0 0 0-8z';
+};
+
+const markerIconColor = (state) => {
+    const kind = markerState(state);
+
+    if (kind === 'pending') return 'text-amber-500';
+    if (kind === 'in_progress') return 'text-blue-600';
+    if (kind === 'submitted') return 'text-violet-600';
+    if (kind === 'success') return 'text-emerald-600';
+    if (kind === 'failed') return 'text-rose-600';
+    if (kind === 'expired') return 'text-slate-500';
+
+    return 'text-slate-500';
 };
 </script>
 
@@ -149,13 +232,24 @@ const notificationBadge = (type) => {
                     <div class="grid gap-5 lg:grid-cols-3">
                         <div class="lg:col-span-2">
                             <p class="text-xs uppercase tracking-[0.16em] text-blue-100/80">Live overview</p>
-                            <h2 class="mt-2 text-2xl font-bold">Track rentals, payments and shipment events in one view</h2>
+                            <h2 class="mt-2 text-2xl font-bold">Maritime operations with clear status, finance and routing signals</h2>
                             <p class="mt-2 max-w-2xl text-sm text-blue-100/85">
-                                This workspace keeps critical account and operational data synchronized. Focus on alerts first, then continue with active rentals.
+                                Dashboard combines rental lifecycle, shipment timing, payment state and incident load from your current database records.
                             </p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+                                    In transit: {{ props.shipmentOverview.inTransitCount }}
+                                </span>
+                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+                                    Upcoming arrivals: {{ props.shipmentOverview.upcomingArrivalsCount }}
+                                </span>
+                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+                                    Attention items: {{ operationalAttentionCount }}
+                                </span>
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
-                            <Link :href="route('services')" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-blue-50">
+                            <Link :href="route('rentals.request.create')" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-blue-50">
                                 Create rental
                             </Link>
                             <Link :href="route('contact')" class="inline-flex items-center justify-center rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
@@ -190,9 +284,13 @@ const notificationBadge = (type) => {
                                     <span
                                         v-for="item in completionChecks"
                                         :key="item.label"
-                                        class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                                        :class="item.done ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white/80 text-slate-500'"
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700"
                                     >
+                                        <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                            <svg class="h-2.5 w-2.5" :class="markerIconColor(item.done ? 'completed' : 'pending')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                <path :d="markerIconPath(item.done ? 'completed' : 'pending')" />
+                                            </svg>
+                                        </span>
                                         {{ item.label }}
                                     </span>
                                 </div>
@@ -220,7 +318,7 @@ const notificationBadge = (type) => {
                                         {{ field }}
                                     </span>
                                 </div>
-                                <p v-else class="mt-2 text-xs font-medium text-emerald-700">
+                                <p v-else class="mt-2 text-xs font-medium text-slate-700">
                                     Profile is complete. You can use all account operations.
                                 </p>
                                 <Link
@@ -257,6 +355,122 @@ const notificationBadge = (type) => {
                             </div>
                         </div>
 
+                        <div class="grid gap-4 xl:grid-cols-2">
+                            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-slate-900">Finance pulse</h3>
+                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                                        Last transaction: {{ formatDate(props.financialOverview.lastTransactionAt) }}
+                                    </span>
+                                </div>
+                                <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('completed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('completed')" />
+                                                </svg>
+                                            </span>
+                                            Paid volume
+                                        </p>
+                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.paidAmount) }}</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('pending')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('pending')" />
+                                                </svg>
+                                            </span>
+                                            Pending
+                                        </p>
+                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.pendingAmount) }}</p>
+                                        <p class="text-xs text-slate-500">{{ props.financialOverview.pendingCount }} transactions</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('failed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('failed')" />
+                                                </svg>
+                                            </span>
+                                            Failed
+                                        </p>
+                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.failedAmount) }}</p>
+                                        <p class="text-xs text-slate-500">{{ props.financialOverview.failedCount }} transactions</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-slate-900">Shipment health</h3>
+                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                                        Fleet signal
+                                    </span>
+                                </div>
+                                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('in_progress')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('in_progress')" />
+                                                </svg>
+                                            </span>
+                                            In transit
+                                        </p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.inTransitCount }}</p>
+                                    </div>
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('completed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('completed')" />
+                                                </svg>
+                                            </span>
+                                            Arrived this week
+                                        </p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.arrivedThisWeekCount }}</p>
+                                    </div>
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('scheduled')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('scheduled')" />
+                                                </svg>
+                                            </span>
+                                            Upcoming arrivals
+                                        </p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.upcomingArrivalsCount }}</p>
+                                    </div>
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor('failed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath('failed')" />
+                                                </svg>
+                                            </span>
+                                            Delayed / high risk
+                                        </p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ operationalAttentionCount }}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                                        Open incidents: {{ props.incidentOverview.openCount }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700">
+                                        <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                            <svg class="h-2.5 w-2.5" :class="markerIconColor('failed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                <path :d="markerIconPath('failed')" />
+                                            </svg>
+                                        </span>
+                                        High severity: {{ props.incidentOverview.highSeverityOpenCount }}
+                                    </span>
+                                </div>
+                            </section>
+                        </div>
+
                         <div class="grid gap-6 2xl:grid-cols-5">
                             <section class="2xl:col-span-2 space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                 <div>
@@ -270,7 +484,14 @@ const notificationBadge = (type) => {
                                             :class="notificationClass(note.type)"
                                         >
                                             <div class="flex items-center justify-between gap-2">
-                                                <p class="text-sm font-semibold">{{ note.title }}</p>
+                                            <p class="inline-flex items-center gap-1.5 text-sm font-semibold">
+                                                <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                    <svg class="h-2.5 w-2.5" :class="markerIconColor(note.type)" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                        <path :d="markerIconPath(note.type)" />
+                                                    </svg>
+                                                </span>
+                                                {{ note.title }}
+                                            </p>
                                                 <span class="rounded-full border border-current/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                                                     {{ notificationBadge(note.type) }}
                                                 </span>
@@ -345,6 +566,61 @@ const notificationBadge = (type) => {
                             </section>
                         </div>
 
+                        <div class="grid gap-6 2xl:grid-cols-5">
+                            <section class="2xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-slate-900">Upcoming milestones</h3>
+                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">10 days</span>
+                                </div>
+                                <div class="mt-4 space-y-2">
+                                    <div
+                                        v-for="event in props.upcomingMilestones"
+                                        :key="event.id"
+                                        class="rounded-xl border px-3 py-2.5"
+                                        :class="milestoneBadgeClass(event.type)"
+                                    >
+                                        <div class="flex items-center justify-between gap-3">
+                                            <p class="inline-flex items-center gap-1.5 text-sm font-semibold">
+                                                <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                    <svg class="h-2.5 w-2.5" :class="markerIconColor(event.type === 'payment' ? 'pending' : 'scheduled')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                        <path :d="markerIconPath(event.type === 'payment' ? 'pending' : 'scheduled')" />
+                                                    </svg>
+                                                </span>
+                                                {{ event.title }}
+                                            </p>
+                                            <span class="text-xs font-medium opacity-80">{{ formatDate(event.date) }}</span>
+                                        </div>
+                                    </div>
+                                    <div v-if="!props.upcomingMilestones.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-3 py-2.5 text-xs text-slate-500">
+                                        No scheduled milestones in the next 10 days.
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="2xl:col-span-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-slate-900">Top sea routes</h3>
+                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">By shipments</span>
+                                </div>
+                                <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                                    <div
+                                        v-for="(route, index) in props.topRoutes"
+                                        :key="`${route.origin_port_name}-${route.destination_port_name}-${index}`"
+                                        class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                                    >
+                                        <p class="text-xs uppercase tracking-wide text-slate-500">Route {{ index + 1 }}</p>
+                                        <p class="mt-1 text-sm font-bold text-slate-900">
+                                            {{ route.origin_port_name || 'N/A' }} -> {{ route.destination_port_name || 'N/A' }}
+                                        </p>
+                                        <p class="mt-2 text-xs font-semibold text-blue-700">{{ route.shipments_count }} shipments</p>
+                                    </div>
+                                    <div v-if="!props.topRoutes.length" class="sm:col-span-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4 text-sm text-slate-500">
+                                        No route analytics yet. Route patterns appear after shipment activity.
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
                         <section id="order-history" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-lg font-bold text-slate-900">Order history</h3>
@@ -377,7 +653,12 @@ const notificationBadge = (type) => {
                                             <td class="px-3 py-3 text-slate-600">{{ formatDate(order.end_date) }}</td>
                                             <td class="px-3 py-3 font-medium text-slate-800">{{ formatMoney(order.price) }}</td>
                                             <td class="px-3 py-3">
-                                                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize" :class="statusClass(order.rental_status)">
+                                                <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize" :class="statusClass(order.rental_status)">
+                                                    <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                        <svg class="h-2.5 w-2.5" :class="markerIconColor(order.rental_status)" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                            <path :d="markerIconPath(order.rental_status)" />
+                                                        </svg>
+                                                    </span>
                                                     {{ order.rental_status || 'unknown' }}
                                                 </span>
                                             </td>
@@ -394,7 +675,12 @@ const notificationBadge = (type) => {
                                 >
                                     <div class="flex items-center justify-between">
                                         <p class="text-sm font-bold text-slate-800">Order #{{ order.id }}</p>
-                                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize" :class="statusClass(order.rental_status)">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize" :class="statusClass(order.rental_status)">
+                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                                <svg class="h-2.5 w-2.5" :class="markerIconColor(order.rental_status)" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <path :d="markerIconPath(order.rental_status)" />
+                                                </svg>
+                                            </span>
                                             {{ order.rental_status || 'unknown' }}
                                         </span>
                                     </div>

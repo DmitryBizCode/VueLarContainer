@@ -8,6 +8,13 @@ use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'country_id' => $this->input('country_id') === '' ? null : $this->input('country_id'),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -16,8 +23,8 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
             'email' => [
                 'required',
                 'string',
@@ -27,8 +34,8 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'phone_number' => ['nullable', 'string', 'max:20'],
-            'company_name' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:500'],
+            'company_name' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string', 'max:255'],
             'country_id' => ['nullable', 'integer', 'exists:countries,id'],
         ];
     }

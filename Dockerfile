@@ -5,28 +5,23 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
 # Stage 2: PHP-FPM with extensions
-FROM php:8.2-fpm-alpine AS php-base
+# Bookworm instead of Alpine: avoids intermittent apk/gcc "I/O error" / integrity failures
+# during `docker compose build` on some Docker Desktop (e.g. Apple Silicon) setups.
+FROM php:8.2-fpm-bookworm AS php-base
 
-# Install system dependencies and PHP extensions
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
-    libpng \
     libpng-dev \
-    libjpeg-turbo \
-    libjpeg-turbo-dev \
-    freetype \
-    freetype-dev \
-    oniguruma \
-    oniguruma-dev \
-    libxml2 \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libonig-dev \
     libxml2-dev \
-    postgresql-libs \
-    postgresql-dev \
+    libpq-dev \
     zip \
     unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
+    && docker-php-ext-install -j"$(nproc)" \
     pdo_pgsql \
     pgsql \
     mbstring \
@@ -34,21 +29,15 @@ RUN apk add --no-cache \
     pcntl \
     bcmath \
     gd \
-    && apk del --no-cache \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    postgresql-dev \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
 
-# PHP Redis extension (PECL; no apk package in Alpine)
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+# PHP Redis extension (PECL)
+RUN apt-get update && apt-get install -y --no-install-recommends $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && apk del --no-cache .build-deps \
-    && rm -rf /usr/local/lib/php/doc/redis /usr/local/lib/php/test/redis /tmp/*
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $PHPIZE_DEPS \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear \
+        /usr/local/lib/php/doc/redis /usr/local/lib/php/test/redis
 
 # Copy Composer from composer stage
 COPY --from=composer-stage /usr/bin/composer /usr/bin/composer

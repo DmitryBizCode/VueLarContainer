@@ -1,8 +1,4 @@
 <script setup>
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -34,74 +30,80 @@ const updatePassword = () => {
 </script>
 
 <template>
-    <section>
+    <section class="space-y-5">
         <header>
-            <h2 class="text-lg font-medium text-gray-900">
-                Update Password
-            </h2>
-
-            <p class="mt-1 text-sm text-gray-600">
-                Ensure your account is using a long, random password to stay
-                secure.
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Security</p>
+            <h3 class="mt-1 text-xl font-bold text-slate-900">Update password</h3>
+            <p class="mt-2 text-sm text-slate-500">
+                Protect your workspace by using a strong password and rotating it regularly.
             </p>
         </header>
 
-        <form @submit.prevent="updatePassword" class="mt-6 space-y-6">
-            <div>
-                <InputLabel for="current_password" value="Current Password" />
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600">
+            <p class="font-semibold text-slate-700">Password checklist</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                    8+ characters
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-violet-600" />
+                    Mixed symbols
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                    Do not reuse old password
+                </span>
+            </div>
+        </div>
 
-                <TextInput
+        <form @submit.prevent="updatePassword" class="space-y-5">
+            <div class="space-y-1.5">
+                <label for="current_password" class="text-xs font-semibold uppercase tracking-wide text-slate-500">Current password</label>
+                <input
                     id="current_password"
                     ref="currentPasswordInput"
                     v-model="form.current_password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     autocomplete="current-password"
                 />
-
-                <InputError
-                    :message="form.errors.current_password"
-                    class="mt-2"
-                />
+                <p v-if="form.errors.current_password" class="text-xs font-medium text-rose-600">{{ form.errors.current_password }}</p>
             </div>
 
-            <div>
-                <InputLabel for="password" value="New Password" />
-
-                <TextInput
+            <div class="space-y-1.5">
+                <label for="password" class="text-xs font-semibold uppercase tracking-wide text-slate-500">New password</label>
+                <input
                     id="password"
                     ref="passwordInput"
                     v-model="form.password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     autocomplete="new-password"
                 />
-
-                <InputError :message="form.errors.password" class="mt-2" />
+                <p v-if="form.errors.password" class="text-xs font-medium text-rose-600">{{ form.errors.password }}</p>
             </div>
 
-            <div>
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
+            <div class="space-y-1.5">
+                <label for="password_confirmation" class="text-xs font-semibold uppercase tracking-wide text-slate-500">Confirm password</label>
+                <input
                     id="password_confirmation"
                     v-model="form.password_confirmation"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     autocomplete="new-password"
                 />
-
-                <InputError
-                    :message="form.errors.password_confirmation"
-                    class="mt-2"
-                />
+                <p v-if="form.errors.password_confirmation" class="text-xs font-medium text-rose-600">{{ form.errors.password_confirmation }}</p>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+                <button
+                    type="submit"
+                    :disabled="form.processing"
+                    class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Save password
+                </button>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -111,8 +113,9 @@ const updatePassword = () => {
                 >
                     <p
                         v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600"
+                        class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"
                     >
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         Saved.
                     </p>
                 </Transition>

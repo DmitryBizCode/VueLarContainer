@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -18,9 +19,20 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        $now = now();
+        $countryId = DB::table('countries')->insertGetId([
+            'name' => 'Ukraine',
+            'iso_code' => 'UA',
+            'interest_tax' => 20.00,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
         $response = $this->post('/register', [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
+            'country_id' => $countryId,
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);

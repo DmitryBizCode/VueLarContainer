@@ -1,9 +1,14 @@
 <script setup>
 import AppSidebar from '@/Components/AppSidebar.vue';
 import AppTopbar from '@/Components/AppTopbar.vue';
+import { useFlashToToast } from '@/composables/useFlashToToast';
+import { Toaster } from 'vue-sonner';
+import 'vue-sonner/style.css';
 import { useQuickActions } from '@/composables/useQuickActions';
 import { computed, onMounted, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+
+useFlashToToast();
 
 const SIDEBAR_STORAGE_KEY = 'auth-shell-sidebar-collapsed';
 
@@ -37,6 +42,19 @@ const userName = computed(() => {
     }
 
     return [user.value.first_name, user.value.last_name].filter(Boolean).join(' ').trim() || user.value.email;
+});
+
+const userPhotoUrl = computed(() => {
+    const u = user.value;
+    if (!u) return null;
+    const url = u.photo_url;
+    if (url) return url;
+    const p = u.photo;
+    if (!p) return null;
+    const s = String(p);
+    if (s.startsWith('http')) return s;
+    if (s.includes('/')) return '/' + s.replace(/^\//, '');
+    return '/image/profile/' + s;
 });
 
 const desktopSidebarClass = computed(() => (sidebarCollapsed.value ? 'w-20' : 'w-72'));
@@ -81,6 +99,7 @@ watch(sidebarCollapsed, (value) => {
                 :user-name="userName"
                 :user-email="user?.email || ''"
                 :user-initials="userInitials"
+                :user-photo-url="userPhotoUrl"
                 mobile
                 @close-mobile="closeMobileSidebar"
             />
@@ -88,7 +107,7 @@ watch(sidebarCollapsed, (value) => {
 
         <div class="relative flex min-h-screen bg-white">
             <div
-                class="relative z-20 hidden self-start lg:sticky lg:top-4 lg:block"
+                class="relative z-40 hidden self-start lg:sticky lg:block"
                 :class="[desktopSidebarClass, transitionsReady ? 'transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]' : 'transition-none']"
             >
                 <AppSidebar
@@ -97,11 +116,12 @@ watch(sidebarCollapsed, (value) => {
                     :user-name="userName"
                     :user-email="user?.email || ''"
                     :user-initials="userInitials"
+                    :user-photo-url="userPhotoUrl"
                 />
 
                 <button
                     type="button"
-                    class="group absolute right-1 top-24 z-30 inline-flex h-16 w-5 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-b from-white to-slate-100 text-slate-500 shadow-sm shadow-slate-300/60 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:h-20 hover:w-6 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="group absolute -right-2 top-24 z-30 inline-flex h-16 w-5 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-b from-white to-slate-100 text-slate-500 shadow-sm shadow-slate-300/60 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:h-[4.25rem] hover:w-[1.35rem] hover:text-slate-800 focus:outline-none"
                     @click="toggleSidebarCollapsed"
                 >
                     <span class="sr-only">Toggle sidebar</span>
@@ -116,6 +136,7 @@ watch(sidebarCollapsed, (value) => {
                     :user-name="userName"
                     :user-email="user?.email || ''"
                     :user-initials="userInitials"
+                    :user-photo-url="userPhotoUrl"
                     @toggle-mobile-sidebar="openMobileSidebar"
                 />
 
@@ -130,5 +151,12 @@ watch(sidebarCollapsed, (value) => {
                 </main>
             </div>
         </div>
+        <Toaster
+            position="top-right"
+            :rich-colors="true"
+            :expand="true"
+            :visible-toasts="5"
+            :gap="8"
+        />
     </div>
 </template>
