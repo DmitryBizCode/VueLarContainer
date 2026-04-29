@@ -7,6 +7,7 @@ use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Models\User;
+use App\Models\Vessel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -66,6 +67,15 @@ class RentalRequestPreviewTest extends TestCase
             'current_port_id' => $origin->id,
         ]);
 
+        Vessel::query()->create([
+            'name' => 'Preview Vessel',
+            'imo_number' => 'IMO'.substr(str_replace('.', '', uniqid('', true)), 0, 12),
+            'capacity_teu' => 800,
+            'status' => 'active',
+            'current_port_id' => $origin->id,
+            'last_inspection_date' => now()->subMonth()->toDateString(),
+        ]);
+
         $user = User::factory()->create(['country_id' => $countryId]);
 
         $start = now()->addDays(10)->toDateString();
@@ -102,5 +112,7 @@ class RentalRequestPreviewTest extends TestCase
         $this->assertNotEmpty($data['available_containers']);
         $this->assertGreaterThan(0, (float) ($data['estimated_price'] ?? 0));
         $this->assertIsArray($data['price_breakdown']);
+        $this->assertArrayHasKey('route_legs', $data['price_breakdown']);
+        $this->assertNotEmpty($data['route_context']['route_legs'] ?? []);
     }
 }

@@ -16,12 +16,14 @@ class Route extends Model
         'destination_port_id',
         'estimated_days',
         'distance',
+        'sea_path',
         'route_status',
     ];
 
     protected $casts = [
         'estimated_days' => 'integer',
         'distance' => 'float',
+        'sea_path' => 'array',
     ];
 
     public function originPort(): BelongsTo

@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const user = usePage().props.auth.user;
@@ -76,6 +76,22 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    transactionsByStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rentalsByStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rentalsByPaymentStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rejectedApproval: {
+        type: Object,
+        default: () => ({ count: 0, lostRevenuePriceSum: 0, txAmountSum: 0 }),
+    },
 });
 
 const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
@@ -134,6 +150,34 @@ const notificationBadge = (type) => {
     if (normalized === 'warning') return 'Attention';
     if (normalized === 'success') return 'Update';
     return 'Info';
+};
+
+const markNotificationRead = (note) => {
+    if (!note?.id || note?.is_read) return;
+
+    router.patch(
+        route('notifications.read', { notification: note.id }),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['stats', 'latestNotifications'] });
+            },
+        }
+    );
+};
+
+const markAllNotificationsRead = () => {
+    router.post(
+        route('notifications.read-all'),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['stats', 'latestNotifications'] });
+            },
+        }
+    );
 };
 
 const milestoneBadgeClass = (type) => {
@@ -471,17 +515,104 @@ const markerIconColor = (state) => {
                             </section>
                         </div>
 
+                        <section class="grid gap-4 lg:grid-cols-3">
+                            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-slate-900">Transactions by status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Your payments across all statuses.</p>
+                                <div v-if="Object.keys(props.transactionsByStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.transactionsByStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No transactions yet.</p>
+                            </div>
+
+                            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-slate-900">Rentals by status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Your rental lifecycle distribution.</p>
+                                <div v-if="Object.keys(props.rentalsByStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.rentalsByStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                            </div>
+
+                            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-slate-900">Rentals by payment status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Payment states for your rentals.</p>
+                                <div v-if="Object.keys(props.rentalsByPaymentStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.rentalsByPaymentStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900">Rejected (approval)</h3>
+                                    <p class="mt-0.5 text-xs text-slate-500">Separate from payment failures.</p>
+                                </div>
+                                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ props.rejectedApproval.count ?? 0 }} rentals
+                                </span>
+                            </div>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                    <p class="text-xs font-semibold text-slate-500">Lost revenue (price)</p>
+                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                    <p class="text-xs font-semibold text-slate-500">Tx volume</p>
+                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.rejectedApproval.txAmountSum ?? 0) }}</p>
+                                </div>
+                            </div>
+                        </section>
+
                         <div class="grid gap-6 2xl:grid-cols-5">
                             <section class="2xl:col-span-2 space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                 <div>
                                     <h3 class="text-lg font-bold text-slate-900">Notifications</h3>
                                     <p class="mt-1 text-xs font-medium text-slate-500">Critical account and shipment updates</p>
+                                    <div v-if="(props.stats?.unreadNotifications ?? 0) > 0" class="mt-2 flex justify-end">
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                            @click="markAllNotificationsRead"
+                                        >
+                                            Mark all as read
+                                        </button>
+                                    </div>
                                     <div class="mt-3 space-y-2">
                                         <div
                                             v-for="note in props.latestNotifications"
                                             :key="`n-${note.id}`"
                                             class="rounded-xl border px-3 py-2.5"
-                                            :class="notificationClass(note.type)"
+                                            :class="[
+                                                notificationClass(note.type),
+                                                note.is_read
+                                                    ? 'bg-slate-50/40 text-slate-500 opacity-80'
+                                                    : 'cursor-pointer bg-white ring-1 ring-amber-200/60 border-amber-200/70 hover:bg-amber-50/30',
+                                            ]"
+                                            @click="!note.is_read && markNotificationRead(note)"
                                         >
                                             <div class="flex items-center justify-between gap-2">
                                             <p class="inline-flex items-center gap-1.5 text-sm font-semibold">
@@ -492,9 +623,14 @@ const markerIconColor = (state) => {
                                                 </span>
                                                 {{ note.title }}
                                             </p>
-                                                <span class="rounded-full border border-current/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                                                    {{ notificationBadge(note.type) }}
-                                                </span>
+                                                <div class="flex items-center gap-2">
+                                                    <span v-if="!note.is_read" class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                                                        Unread
+                                                    </span>
+                                                    <span class="rounded-full border border-current/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                                                        {{ notificationBadge(note.type) }}
+                                                    </span>
+                                                </div>
                                             </div>
                                             <p class="mt-1 line-clamp-2 text-xs opacity-80">{{ note.message }}</p>
                                         </div>

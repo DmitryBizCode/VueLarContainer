@@ -15,6 +15,72 @@ use Illuminate\Support\Facades\Schema;
 class SimulationService
 {
     /**
+     * @return array<string, float|string>
+     */
+    protected function logisticsSensorOverlay(?Rental $rental): array
+    {
+        if ($rental === null) {
+            return [];
+        }
+
+        $rental->loadMissing(['originPort', 'destinationPort', 'route']);
+        $origin = $rental->originPort;
+        $dest = $rental->destinationPort;
+        if ($origin?->latitude === null || $dest?->latitude === null
+            || $origin->longitude === null || $dest->longitude === null) {
+            return ['logistics_phase' => 'unknown'];
+        }
+
+        $start = $rental->start_date ? CarbonImmutable::parse((string) $rental->start_date) : null;
+        $end = $rental->end_date ? CarbonImmutable::parse((string) $rental->end_date) : null;
+        $now = CarbonImmutable::now();
+        $t = 0.0;
+        if ($start && $end && $end->gt($start)) {
+            if ($now->lte($start)) {
+                $t = 0.0;
+            } elseif ($now->gte($end)) {
+                $t = 1.0;
+            } else {
+                $total = max(1, $start->diffInSeconds($end));
+                $elapsed = $start->diffInSeconds($now);
+                $t = min(1.0, max(0.0, $elapsed / $total));
+            }
+        }
+
+        $oLat = (float) $origin->latitude;
+        $oLng = (float) $origin->longitude;
+        $dLat = (float) $dest->latitude;
+        $dLng = (float) $dest->longitude;
+        $seaPath = is_array($rental->route?->sea_path) ? $rental->route->sea_path : null;
+        $path = LogisticsMapGeometryService::resolvePath($oLat, $oLng, $dLat, $dLng, $seaPath);
+        $pt = LogisticsMapGeometryService::interpolateAlongPath($path, $t);
+        $lat = $pt['lat'];
+        $lng = $pt['lng'];
+
+        $row = DB::table('shipment_items')
+            ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
+            ->where('shipment_items.rental_id', $rental->id)
+            ->orderByDesc('shipments.updated_at')
+            ->select('shipments.status')
+            ->first();
+
+        $st = $row ? strtolower((string) $row->status) : '';
+        $phase = match ($st) {
+            'in_transit', 'in_progress' => 'at_sea',
+            'arrived', 'completed' => 'in_port',
+            'scheduled' => 'scheduled',
+            default => $t >= 1.0 ? 'completed' : 'at_sea',
+        };
+
+        return [
+            'route_lat' => $lat,
+            'route_lng' => $lng,
+            'logistics_phase' => $phase,
+            'route_progress' => $t,
+        ];
+    }
+
+    /**
      * @param  bool  $writeMetricsToDatabaseImmediately  When true (e.g. 3D / actuator API), INSERT raw samples into `metrics` immediately instead of the Redis buffer.
      */
     public function tickContainer(
@@ -478,10 +544,14 @@ class SimulationService
             ];
         }
 
-        DB::transaction(function () use ($container, $rentalId, $state, $actuators, $snapshot, $now) {
+        DB::transaction(function () use ($container, $rental, $rentalId, $state, $actuators, $snapshot, $now) {
             $snapshot->container_id = $container->id;
             $snapshot->rental_id = $rentalId;
-            $snapshot->sensor_state = $state->toArray();
+            $sensorState = $state->toArray();
+            if ($rental !== null) {
+                $sensorState = array_merge($sensorState, $this->logisticsSensorOverlay($rental));
+            }
+            $snapshot->sensor_state = $sensorState;
             $snapshot->actuators = $actuators->toArray();
             $snapshot->last_tick_at = $now;
             $snapshot->save();

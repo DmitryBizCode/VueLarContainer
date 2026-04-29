@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Notification;
 use App\Models\Rental;
 use App\Services\ActivityLogService;
+use App\Services\RentalShipmentProvisionerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,8 @@ use Inertia\Response;
 
 class AdminRentalController extends Controller
 {
+    private const APPROVAL_REJECT_PREFIX = 'APPROVAL_REJECTED:';
+
     public function index(Request $request): Response
     {
         $validated = $request->validate([
@@ -74,7 +77,7 @@ class AdminRentalController extends Controller
             ],
             'rentals' => $rentals,
             'statusOptions' => ['draft', 'pending_approval', 'approved', 'rejected', 'scheduled', 'in_progress', 'completed', 'cancelled'],
-            'paymentStatusOptions' => ['pending', 'paid', 'unpaid', 'failed'],
+            'paymentStatusOptions' => ['pending', 'paid', 'unpaid', 'failed', 'rejected_by_approval'],
         ]);
     }
 
@@ -162,6 +165,7 @@ class AdminRentalController extends Controller
                 ],
                 'approval_log' => $logs,
                 'rejection_reason' => $r->rejection_reason,
+                'cancellation_reason' => $r->cancellation_reason,
             ];
         });
 
@@ -239,6 +243,7 @@ class AdminRentalController extends Controller
             'reviewed_by' => $rental->reviewed_by,
             'reviewed_at' => $rental->reviewed_at?->toISOString(),
             'rejection_reason' => $rental->rejection_reason,
+            'cancellation_reason' => $rental->cancellation_reason,
             'contract_pdf' => $rental->contract_pdf,
             'description' => $rental->description,
             'created_at' => $rental->created_at?->toISOString(),
@@ -318,6 +323,7 @@ class AdminRentalController extends Controller
                 'payment_status' => $rental->payment_status,
                 'reviewed_at' => $rental->reviewed_at?->toISOString(),
                 'rejection_reason' => $rental->rejection_reason,
+                'cancellation_reason' => $rental->cancellation_reason,
                 'description' => $rental->description,
                 'created_at' => $rental->created_at?->toISOString(),
             ],
@@ -334,13 +340,14 @@ class AdminRentalController extends Controller
             return back()->withErrors(['status' => "Transition from '{$currentStatus}' to '{$nextStatus}' is not allowed."]);
         }
 
-        DB::transaction(function () use ($request, $rental, $validated, $nextStatus) {
+        DB::transaction(function () use ($request, $rental, $validated, $nextStatus, $currentStatus) {
             $oldValues = [
                 'status' => $rental->status,
                 'payment_status' => $rental->payment_status,
                 'reviewed_by' => $rental->reviewed_by,
                 'reviewed_at' => $rental->reviewed_at,
                 'rejection_reason' => $rental->rejection_reason,
+                'cancellation_reason' => $rental->cancellation_reason,
             ];
             $rental->status = $nextStatus;
             if (in_array($nextStatus, ['approved', 'rejected'], true)) {
@@ -351,11 +358,26 @@ class AdminRentalController extends Controller
                 $rental->reviewed_by = null;
                 $rental->reviewed_at = null;
                 $rental->rejection_reason = null;
+                $rental->cancellation_reason = null;
             } elseif (! empty($validated['payment_status'])) {
                 $rental->payment_status = $validated['payment_status'];
             }
-            if ($nextStatus !== 'pending_approval') {
-                $rental->rejection_reason = $nextStatus === 'rejected' ? ($validated['rejection_reason'] ?? null) : null;
+            if ($nextStatus === 'pending_approval') {
+                // reasons already cleared above
+            } elseif ($nextStatus === 'rejected') {
+                $rental->rejection_reason = $validated['rejection_reason'] ?? null;
+                $rental->cancellation_reason = null;
+                // Any reject from the approval queue should be treated as rejected-by-approval for finance reporting,
+                // even if the operator does not include the legacy marker prefix in the reason text.
+                if ($currentStatus === 'pending_approval' || $this->isApprovalRejectedReason((string) ($rental->rejection_reason ?? ''))) {
+                    $rental->payment_status = 'rejected_by_approval';
+                }
+            } elseif ($nextStatus === 'cancelled') {
+                $rental->cancellation_reason = $validated['cancellation_reason'] ?? null;
+                $rental->rejection_reason = null;
+            } else {
+                $rental->rejection_reason = null;
+                $rental->cancellation_reason = null;
             }
             $rental->save();
 
@@ -378,7 +400,21 @@ class AdminRentalController extends Controller
             ]);
         });
 
+        if ($nextStatus === 'approved') {
+            $rental->refresh();
+            try {
+                app(RentalShipmentProvisionerService::class)->provisionForApprovedRental($rental);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return back()->with('status', "Rental #{$rental->id} updated.");
+    }
+
+    private function isApprovalRejectedReason(string $reason): bool
+    {
+        return str_starts_with(trim($reason), self::APPROVAL_REJECT_PREFIX);
     }
 
     public function destroy(Request $request, Rental $rental): RedirectResponse

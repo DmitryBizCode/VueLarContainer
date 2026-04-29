@@ -171,6 +171,11 @@ const returnToPending = () => {
                         <p class="mt-1 text-sm text-rose-900">{{ selectedRental.rejection_reason }}</p>
                     </div>
 
+                    <div v-if="selectedRental.status === 'cancelled' && selectedRental.cancellation_reason" class="rounded border border-amber-200 bg-amber-50/50 p-3">
+                        <p class="text-xs font-medium text-amber-800">Cancellation reason</p>
+                        <p class="mt-1 text-sm text-amber-950">{{ selectedRental.cancellation_reason }}</p>
+                    </div>
+
                     <div v-if="selectedRental.approval_log?.length" class="border-t border-slate-100 pt-3">
                         <p class="text-xs font-medium text-slate-500">Status history</p>
                         <ul class="mt-2 space-y-1.5 text-sm">

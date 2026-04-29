@@ -28,6 +28,10 @@ class RentalsCenterController extends Controller
 
         $baseOverviewQuery = DB::table('rentals')->where('user_id', $userId);
 
+        // "Upcoming starts" / "Next 7 days": from local midnight today, next 7 calendar day boundaries (excludes non-actionable).
+        $upcomingWindowStart = $now->copy()->startOfDay();
+        $upcomingWindowEnd = $upcomingWindowStart->copy()->addDays(7);
+
         $overview = [
             'activeCount' => (clone $baseOverviewQuery)
                 ->whereIn('status', ['active', 'in_progress', 'scheduled'])
@@ -36,12 +40,16 @@ class RentalsCenterController extends Controller
                 ->where('status', 'completed')
                 ->count(),
             'overduePaymentsCount' => (clone $baseOverviewQuery)
-                ->whereIn('payment_status', ['unpaid', 'pending', 'failed'])
+                ->whereNotIn('status', ['cancelled', 'rejected', 'draft', 'completed'])
+                ->whereNotIn('payment_status', ['paid', 'rejected_by_approval'])
                 ->whereNotNull('end_date')
                 ->where('end_date', '<', $now)
                 ->count(),
             'upcomingStartsCount' => (clone $baseOverviewQuery)
-                ->whereBetween('start_date', [$now, $now->copy()->addDays(7)])
+                ->whereNotNull('start_date')
+                ->where('start_date', '>=', $upcomingWindowStart)
+                ->where('start_date', '<', $upcomingWindowEnd)
+                ->whereNotIn('status', ['cancelled', 'rejected', 'draft', 'completed'])
                 ->count(),
         ];
 
@@ -57,9 +65,12 @@ class RentalsCenterController extends Controller
                 'rentals.status',
                 'rentals.payment_status',
                 'rentals.description',
+                'rentals.rejection_reason',
+                'rentals.cancellation_reason',
                 'containers.serial_number as container_serial_number',
                 'containers.type as container_type',
                 'containers.iot_active as container_iot_active',
+                'containers.current_status as container_operational_status',
             ])
             ->selectRaw('(SELECT s.status FROM shipment_items si JOIN shipments s ON s.id = si.shipment_id WHERE si.rental_id = rentals.id ORDER BY s.updated_at DESC LIMIT 1) as shipment_status')
             ->selectRaw('(SELECT s.tracking_number FROM shipment_items si JOIN shipments s ON s.id = si.shipment_id WHERE si.rental_id = rentals.id ORDER BY s.updated_at DESC LIMIT 1) as tracking_number')
@@ -67,8 +78,8 @@ class RentalsCenterController extends Controller
             ->selectRaw('(SELECT t.status FROM transactions t WHERE t.rental_id = rentals.id ORDER BY t.transaction_date DESC LIMIT 1) as last_transaction_status')
             ->selectRaw('(SELECT t.transaction_date FROM transactions t WHERE t.rental_id = rentals.id ORDER BY t.transaction_date DESC LIMIT 1) as last_transaction_date')
             ->selectRaw(
-                '(CASE WHEN rentals.status IN ('.implode(',', array_fill(0, count(Rental::IOT_MONITOR_ACCESS_STATUSES), '?')).') AND containers.iot_active = true THEN 1 ELSE 0 END) as can_view_iot_monitor',
-                Rental::IOT_MONITOR_ACCESS_STATUSES
+                '(CASE WHEN rentals.status IN ('.implode(',', array_fill(0, count(Rental::IOT_MONITOR_ACCESS_STATUSES), '?')).') AND containers.iot_active = true AND (rentals.end_date IS NULL OR rentals.end_date >= ?) THEN 1 ELSE 0 END) as can_view_iot_monitor',
+                array_merge(Rental::IOT_MONITOR_ACCESS_STATUSES, [$now])
             )
             ->orderByDesc('rentals.created_at');
 

@@ -14,6 +14,7 @@ class Transaction extends Model
         'status',
         'external_provider_id',
         'refund_reason',
+        'status_note',
         'transaction_date',
         'payment_method',
     ];

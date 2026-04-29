@@ -1,7 +1,7 @@
 <script setup>
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps({
     routes: {
@@ -9,6 +9,11 @@ const props = defineProps({
         default: () => [],
     },
     ports: {
+        type: Array,
+        default: () => [],
+    },
+    /** Origin options for "Select ports" — ports with at least one available container (load-out). */
+    originPorts: {
         type: Array,
         default: () => [],
     },
@@ -65,6 +70,21 @@ const destinationPortsOptions = computed(() => {
     if (!originId) return props.ports;
     return props.ports.filter((port) => String(port.id) !== originId);
 });
+
+watch(
+    () => [props.routeMode, props.originPorts, props.originPortId],
+    () => {
+        if (props.routeMode !== 'ports') return;
+        const id = props.originPortId != null && props.originPortId !== '' ? String(props.originPortId) : '';
+        if (!id) return;
+        const list = props.originPorts?.length ? props.originPorts : [];
+        const valid = list.some((p) => String(p.id) === id);
+        if (!valid) {
+            emit('update:originPortId', '');
+        }
+    },
+    { immediate: true }
+);
 
 const startDateModel = computed({
     get: () => (props.startDate ? new Date(props.startDate + 'T12:00:00') : null),
@@ -131,13 +151,17 @@ const minEndDateModel = computed(() => (props.minEndDate ? new Date(props.minEnd
                         id="origin_port_id"
                         :value="originPortId"
                         class="mt-1.5 w-full rounded-xl border-slate-200 text-sm shadow-sm focus:border-blue-700 focus:ring-blue-700"
+                        :disabled="!originPorts.length"
                         @change="emit('update:originPortId', $event.target.value)"
                     >
                         <option value="">Select origin port</option>
-                        <option v-for="port in ports" :key="`origin-${port.id}`" :value="port.id">
+                        <option v-for="port in originPorts" :key="`origin-${port.id}`" :value="port.id">
                             {{ port.label }}
                         </option>
                     </select>
+                    <p v-if="!originPorts.length" class="mt-1.5 text-xs text-amber-700">
+                        No available container is currently at any port. You cannot start a new rental from origin until stock is available.
+                    </p>
                 </div>
 
                 <div>

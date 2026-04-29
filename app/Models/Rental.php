@@ -39,6 +39,7 @@ class Rental extends Model
         'package_count',
         'cargo_value',
         'priority',
+        'routing_priority',
         'incoterm',
         'loading_type',
         'delivery_mode',
@@ -74,6 +75,7 @@ class Rental extends Model
         'payment_approved_at',
         'payment_approved_by',
         'rejection_reason',
+        'cancellation_reason',
         'contract_pdf',
         'description',
     ];
@@ -114,6 +116,10 @@ class Rental extends Model
 
     public function canAccessIotMonitor(): bool
     {
+        if ($this->end_date !== null && $this->end_date->isPast()) {
+            return false;
+        }
+
         return in_array((string) $this->status, self::IOT_MONITOR_ACCESS_STATUSES, true);
     }
 

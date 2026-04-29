@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 import RevenueDynamicsChart from '@/Components/Finance/RevenueDynamicsChart.vue';
 import PaymentMethodsChart from '@/Components/Finance/PaymentMethodsChart.vue';
 import FailedTrendChart from '@/Components/Finance/FailedTrendChart.vue';
@@ -9,13 +9,19 @@ import BarChartHorizontal from '@/Components/Finance/BarChartHorizontal.vue';
 import RentalsVsRevenueChart from '@/Components/Finance/RentalsVsRevenueChart.vue';
 import DailyBreakdownChart from '@/Components/Finance/DailyBreakdownChart.vue';
 import FinanceHistoryModal from '@/Components/Finance/FinanceHistoryModal.vue';
+import Modal from '@/Components/Modal.vue';
 
 const props = defineProps({
     synthetic_ledger_prefix: { type: String, default: '' },
+    syntheticTransactions: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     overview: { type: Object, required: true },
     rentalsSummary: { type: Object, default: () => ({}) },
     containersSummary: { type: Object, default: () => ({}) },
+    transactionsByStatus: { type: Object, default: () => ({}) },
+    rentalsByStatus: { type: Object, default: () => ({}) },
+    rentalsByPaymentStatus: { type: Object, default: () => ({}) },
+    rejectedApproval: { type: Object, default: () => ({ count: 0, lostRevenuePriceSum: 0, txAmountSum: 0 }) },
     chartData: { type: Array, default: () => [] },
     chartPaymentMethods: { type: Array, default: () => [] },
     chartByRoute: { type: Array, default: () => [] },
@@ -88,8 +94,60 @@ const formatDate = (v) => (v ? new Intl.DateTimeFormat('en-GB', { day: '2-digit'
 const isSyntheticLedgerRef = (externalId) =>
     Boolean(props.synthetic_ledger_prefix && String(externalId || '').startsWith(props.synthetic_ledger_prefix));
 
-const setTransactionStatus = (txId, status) => {
-    router.patch(route('admin.finance.transactions.update', txId), { status });
+const txStatusModal = reactive({
+    show: false,
+    txId: null,
+    status: '',
+    note: '',
+    error: '',
+});
+
+const onTransactionStatusChange = (tx, event) => {
+    const newStatus = String(event.target.value || '').toLowerCase();
+    if (['failed', 'cancelled'].includes(newStatus)) {
+        event.target.value = tx.status;
+        txStatusModal.txId = tx.id;
+        txStatusModal.status = event.target.value;
+        txStatusModal.note = '';
+        txStatusModal.error = '';
+        txStatusModal.show = true;
+
+        return;
+    }
+
+    router.patch(
+        route('admin.finance.transactions.update', tx.id),
+        { status: event.target.value, status_note: null },
+        { preserveScroll: true }
+    );
+};
+
+const confirmTxStatusWithNote = () => {
+    const n = txStatusModal.note?.trim() || '';
+    if (!n) {
+        txStatusModal.error = 'A note is required for failed or cancelled transactions.';
+
+        return;
+    }
+
+    txStatusModal.error = '';
+    router.patch(
+        route('admin.finance.transactions.update', txStatusModal.txId),
+        { status: txStatusModal.status, status_note: txStatusModal.note },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                txStatusModal.show = false;
+            },
+            onError: (errors) => {
+                txStatusModal.error = errors.status_note?.[0] || errors.status?.[0] || 'Could not update.';
+            },
+        }
+    );
+};
+
+const closeTxStatusModal = () => {
+    txStatusModal.show = false;
 };
 
 const setRentalPaymentStatus = (rentalId, paymentStatus) => {
@@ -170,6 +228,76 @@ const navItems = [
                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Revenue (rentals)</p>
                                 <p class="mt-1 text-2xl font-bold text-slate-900">{{ formatMoney(rentalsSummary.revenuePaid) }}</p>
                                 <p class="text-xs text-slate-600">{{ rentalsSummary.rentalsPaidCount }} rentals</p>
+                            </div>
+                        </section>
+                        <section class="mt-4 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900">Rejected (approval)</h3>
+                                    <p class="mt-0.5 text-xs text-slate-500">Separate from non-payment rejects.</p>
+                                </div>
+                                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ rejectedApproval.count ?? 0 }} rentals
+                                </span>
+                            </div>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                                    <p class="text-xs font-semibold text-slate-500">Lost revenue (price)</p>
+                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                                    <p class="text-xs font-semibold text-slate-500">Tx volume</p>
+                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(rejectedApproval.txAmountSum ?? 0) }}</p>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="mt-6 grid gap-4 lg:grid-cols-3">
+                            <div class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-semibold text-slate-900">Transactions by status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Global breakdown (all statuses).</p>
+                                <div v-if="Object.keys(props.transactionsByStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.transactionsByStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No transaction rows yet.</p>
+                            </div>
+
+                            <div class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-semibold text-slate-900">Rentals by status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Lifecycle coverage including rejected/pending.</p>
+                                <div v-if="Object.keys(props.rentalsByStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.rentalsByStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                            </div>
+
+                            <div class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                                <h3 class="text-sm font-semibold text-slate-900">Rentals by payment status</h3>
+                                <p class="mt-1 text-xs text-slate-500">Paid/pending/unpaid/failed/cancelled.</p>
+                                <div v-if="Object.keys(props.rentalsByPaymentStatus || {}).length" class="mt-3 space-y-2">
+                                    <div
+                                        v-for="(row, status) in props.rentalsByPaymentStatus"
+                                        :key="status"
+                                        class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                    >
+                                        <span class="font-semibold text-slate-700">{{ status }}</span>
+                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
                             </div>
                         </section>
                         <div class="grid gap-6 lg:grid-cols-2">
@@ -343,7 +471,7 @@ const navItems = [
                                             <td class="px-5 py-3 text-right">
                                                 <div class="flex items-center justify-end gap-2">
                                                     <button type="button" class="text-xs text-slate-500 underline hover:text-slate-700" @click="openHistory('transaction', t.id)">History</button>
-                                                    <select class="rounded-lg border border-slate-200 text-xs" :value="t.status" @change="(e) => setTransactionStatus(t.id, e.target.value)">
+                                                    <select class="rounded-lg border border-slate-200 text-xs" :value="t.status" @change="(e) => onTransactionStatusChange(t, e)">
                                                         <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
                                                     </select>
                                                 </div>
@@ -501,7 +629,7 @@ const navItems = [
                             <input v-model="filterForm.date_to" type="date" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                             <button type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700" @click="applyFilters">Filter</button>
                         </div>
-                        <div class="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-slate-50">
                                     <tr>
@@ -525,6 +653,29 @@ const navItems = [
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-200">
+                                    <tr v-for="t in (props.syntheticTransactions || [])" :key="`synthetic-${t.id}`" class="bg-indigo-50/40">
+                                        <td class="px-5 py-3 text-sm text-slate-900">
+                                            <span class="font-mono text-xs">{{ t.id }}</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <Link :href="route('admin.rentals.show', t.rental_id)" class="font-medium text-slate-700 hover:underline">#{{ t.rental_id }}</Link>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm text-slate-700">{{ formatMoney(t.amount) }} {{ t.currency }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">
+                                            <p class="font-mono text-xs">{{ t.external_provider_id || '—' }}</p>
+                                            <span class="mt-1 inline-block rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-800">
+                                                Manual ledger
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <span class="rounded px-2 py-0.5 text-xs bg-rose-100 text-rose-800">failed</span>
+                                            <p v-if="t.status_note" class="mt-1 text-xs text-slate-500">{{ t.status_note }}</p>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm text-slate-700">{{ formatDate(t.transaction_date) }}</td>
+                                        <td class="px-5 py-3 text-right">
+                                            <span class="text-xs font-semibold text-slate-400">—</span>
+                                        </td>
+                                    </tr>
                                     <tr v-for="t in transactions.data" :key="t.id">
                                         <td class="px-5 py-3 text-sm text-slate-900">{{ t.id }}</td>
                                         <td class="px-5 py-3 text-sm">
@@ -545,7 +696,7 @@ const navItems = [
                                         <td class="px-5 py-3 text-right">
                                             <div class="flex items-center justify-end gap-2">
                                                 <button type="button" class="text-xs text-slate-500 underline hover:text-slate-700" @click="openHistory('transaction', t.id)">History</button>
-                                                <select class="rounded border border-slate-200 text-xs" :value="t.status" @change="(e) => setTransactionStatus(t.id, e.target.value)">
+                                                <select class="rounded border border-slate-200 text-xs" :value="t.status" @change="(e) => onTransactionStatusChange(t, e)">
                                                     <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
                                                 </select>
                                             </div>
@@ -603,6 +754,32 @@ const navItems = [
                 </main>
             </div>
         </div>
+        <Modal :show="txStatusModal.show" max-width="md" @close="closeTxStatusModal">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-slate-900">Transaction status</h3>
+                <p class="mt-2 text-sm text-slate-600">
+                    Set status to <strong class="capitalize">{{ txStatusModal.status }}</strong>. A short note is required for the customer and audit trail.
+                </p>
+                <label class="mt-4 block text-xs font-semibold text-slate-500" for="tx-status-note">Status note</label>
+                <textarea
+                    id="tx-status-note"
+                    v-model="txStatusModal.note"
+                    rows="3"
+                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    placeholder="Explain why the payment failed or was cancelled"
+                />
+                <p v-if="txStatusModal.error" class="mt-2 text-sm text-rose-600">{{ txStatusModal.error }}</p>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" @click="closeTxStatusModal">
+                        Cancel
+                    </button>
+                    <button type="button" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" @click="confirmTxStatusWithNote">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <FinanceHistoryModal
             :show="historyModalShow"
             :type="historyType"

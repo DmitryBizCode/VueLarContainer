@@ -15,6 +15,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:selectedContainerId']);
+
+const statusLabel = (value) =>
+    String(value || '')
+        .replaceAll('_', ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 </script>
 
 <template>
@@ -62,9 +67,17 @@ const emit = defineEmits(['update:selectedContainerId']);
                             Owner: {{ container.owner_name || 'N/A' }} · Port: {{ container.current_port_name || 'N/A' }}
                         </p>
                     </div>
-                    <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-                        IoT {{ container.iot_active ? 'on' : 'off' }}
-                    </span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span
+                            v-if="container.current_status"
+                            class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
+                        >
+                            {{ statusLabel(container.current_status) }}
+                        </span>
+                        <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                            IoT {{ container.iot_active ? 'on' : 'off' }}
+                        </span>
+                    </div>
                 </div>
             </label>
         </div>

@@ -328,7 +328,7 @@ watch(
                     </select>
                     <button type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700" @click="applyFilters">Filter</button>
                 </div>
-                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
                             <tr>
@@ -364,7 +364,7 @@ watch(
                                 <td class="px-4 py-2 text-center" @click.stop>
                                     <select
                                         :value="c.current_port_id"
-                                        class="min-w-[120px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+                                        class="w-[140px] max-w-[140px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
                                         @change="quickPatch(c, 'current_port_id', $event.target.value)"
                                     >
                                         <option value="">—</option>
@@ -374,7 +374,7 @@ watch(
                                 <td class="px-4 py-2 text-center" @click.stop>
                                     <select
                                         :value="c.current_status"
-                                        class="min-w-[140px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
+                                        class="w-[132px] max-w-[132px] rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
                                         @change="quickPatch(c, 'current_status', $event.target.value)"
                                     >
                                         <option v-for="s in statusOptions" :key="s" :value="s">{{ statusLabel(s) }}</option>
@@ -383,7 +383,7 @@ watch(
                                 <td class="px-4 py-2 text-center" @click.stop>
                                     <select
                                         :value="c.iot_active ? '1' : '0'"
-                                        class="min-w-[100px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+                                        class="w-[84px] max-w-[84px] rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm"
                                         @change="quickPatch(c, 'iot_active', $event.target.value === '1')"
                                     >
                                         <option value="0">Off</option>

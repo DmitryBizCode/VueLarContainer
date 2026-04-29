@@ -90,6 +90,78 @@ const formatDate = (v) =>
                     </div>
                 </div>
 
+                <section v-if="props.stats.rejectedApproval" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Rejected (approval)</h2>
+                            <p class="mt-0.5 text-xs text-slate-500">Counted into Failed totals and reported separately.</p>
+                        </div>
+                        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                            {{ props.stats.rejectedApproval.count ?? 0 }} rentals
+                        </span>
+                    </div>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">Lost revenue (price)</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">Tx volume</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.rejectedApproval.txAmountSum ?? 0) }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid gap-4 lg:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Transactions by status</h2>
+                        <p class="mt-1 text-xs text-slate-500">Counts and sums across all statuses.</p>
+                        <div v-if="props.stats.transactionsByStatus && Object.keys(props.stats.transactionsByStatus).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(row, status) in props.stats.transactionsByStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No transaction rows yet.</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Rentals by status</h2>
+                        <p class="mt-1 text-xs text-slate-500">Lifecycle status coverage.</p>
+                        <div v-if="props.stats.rentalsByStatus && Object.keys(props.stats.rentalsByStatus).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(count, status) in props.stats.rentalsByStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ count }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Rentals by payment status</h2>
+                        <p class="mt-1 text-xs text-slate-500">Payment states across rentals.</p>
+                        <div v-if="props.stats.rentalsByPaymentStatus && Object.keys(props.stats.rentalsByPaymentStatus).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(row, status) in props.stats.rentalsByPaymentStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                    </div>
+                </section>
+
                 <!-- Traffic & analytics (request logs, last 30 days) -->
                 <section
                     v-if="(props.stats.topCountries && Object.keys(props.stats.topCountries).length) || (props.stats.topDevicesOrdered && props.stats.topDevicesOrdered.length) || (props.stats.topBrowsersOrdered && props.stats.topBrowsersOrdered.length) || (props.stats.popularPathsUser && props.stats.popularPathsUser.length) || (props.stats.popularPathsAdmin && props.stats.popularPathsAdmin.length)"

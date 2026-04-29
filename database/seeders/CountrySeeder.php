@@ -13,6 +13,11 @@ class CountrySeeder extends Seeder
         'DK' => '+45', 'FI' => '+358', 'CZ' => '+420', 'SK' => '+421', 'RO' => '+40', 'HU' => '+36',
         'PT' => '+351', 'AT' => '+43', 'CH' => '+41', 'TR' => '+90', 'US' => '+1', 'CA' => '+1',
         'AU' => '+61', 'JP' => '+81',
+        'HR' => '+385', 'SI' => '+386', 'GR' => '+30', 'EE' => '+372', 'LV' => '+371', 'LT' => '+370',
+        'MT' => '+356', 'CY' => '+357',
+        'SG' => '+65', 'AE' => '+971', 'EG' => '+20', 'CN' => '+86',
+        // North Africa / Middle East (for expanded ports)
+        'MA' => '+212', 'DZ' => '+213', 'TN' => '+216', 'IL' => '+972',
     ];
 
     public function run(): void
@@ -29,6 +34,7 @@ class CountrySeeder extends Seeder
                     DB::table('countries')->where('iso_code', $code)->update(['phone_code' => $phoneCodes[$code], 'updated_at' => $now]);
                 }
             }
+            $this->ensureExtendedCountries($phoneCodes, $now);
 
             return;
         }
@@ -60,6 +66,66 @@ class CountrySeeder extends Seeder
             ['name' => 'Canada', 'iso_code' => 'CA', 'phone_code' => $phoneCodes['CA'], 'interest_tax' => 5.00, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Australia', 'iso_code' => 'AU', 'phone_code' => $phoneCodes['AU'], 'interest_tax' => 10.00, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Japan', 'iso_code' => 'JP', 'phone_code' => $phoneCodes['JP'], 'interest_tax' => 10.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Croatia', 'iso_code' => 'HR', 'phone_code' => $phoneCodes['HR'], 'interest_tax' => 25.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Slovenia', 'iso_code' => 'SI', 'phone_code' => $phoneCodes['SI'], 'interest_tax' => 22.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Greece', 'iso_code' => 'GR', 'phone_code' => $phoneCodes['GR'], 'interest_tax' => 24.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Estonia', 'iso_code' => 'EE', 'phone_code' => $phoneCodes['EE'], 'interest_tax' => 22.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Latvia', 'iso_code' => 'LV', 'phone_code' => $phoneCodes['LV'], 'interest_tax' => 21.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Lithuania', 'iso_code' => 'LT', 'phone_code' => $phoneCodes['LT'], 'interest_tax' => 21.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Malta', 'iso_code' => 'MT', 'phone_code' => $phoneCodes['MT'], 'interest_tax' => 18.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Cyprus', 'iso_code' => 'CY', 'phone_code' => $phoneCodes['CY'], 'interest_tax' => 19.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Singapore', 'iso_code' => 'SG', 'phone_code' => $phoneCodes['SG'], 'interest_tax' => 9.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'United Arab Emirates', 'iso_code' => 'AE', 'phone_code' => $phoneCodes['AE'], 'interest_tax' => 5.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Egypt', 'iso_code' => 'EG', 'phone_code' => $phoneCodes['EG'], 'interest_tax' => 14.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'China', 'iso_code' => 'CN', 'phone_code' => $phoneCodes['CN'], 'interest_tax' => 13.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Morocco', 'iso_code' => 'MA', 'phone_code' => $phoneCodes['MA'], 'interest_tax' => 20.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Algeria', 'iso_code' => 'DZ', 'phone_code' => $phoneCodes['DZ'], 'interest_tax' => 19.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Tunisia', 'iso_code' => 'TN', 'phone_code' => $phoneCodes['TN'], 'interest_tax' => 19.00, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Israel', 'iso_code' => 'IL', 'phone_code' => $phoneCodes['IL'], 'interest_tax' => 17.00, 'created_at' => $now, 'updated_at' => $now],
         ]);
+
+        $this->ensureExtendedCountries($phoneCodes, $now);
+    }
+
+    /**
+     * Adds newer EU / neighbour countries when DB was seeded before those rows existed.
+     *
+     * @param  array<string, string>  $phoneCodes
+     */
+    private function ensureExtendedCountries(array $phoneCodes, \DateTimeInterface $now): void
+    {
+        $extra = [
+            ['name' => 'Croatia', 'iso_code' => 'HR', 'interest_tax' => 25.00],
+            ['name' => 'Slovenia', 'iso_code' => 'SI', 'interest_tax' => 22.00],
+            ['name' => 'Greece', 'iso_code' => 'GR', 'interest_tax' => 24.00],
+            ['name' => 'Estonia', 'iso_code' => 'EE', 'interest_tax' => 22.00],
+            ['name' => 'Latvia', 'iso_code' => 'LV', 'interest_tax' => 21.00],
+            ['name' => 'Lithuania', 'iso_code' => 'LT', 'interest_tax' => 21.00],
+            ['name' => 'Malta', 'iso_code' => 'MT', 'interest_tax' => 18.00],
+            ['name' => 'Cyprus', 'iso_code' => 'CY', 'interest_tax' => 19.00],
+            ['name' => 'Singapore', 'iso_code' => 'SG', 'interest_tax' => 9.00],
+            ['name' => 'United Arab Emirates', 'iso_code' => 'AE', 'interest_tax' => 5.00],
+            ['name' => 'Egypt', 'iso_code' => 'EG', 'interest_tax' => 14.00],
+            ['name' => 'China', 'iso_code' => 'CN', 'interest_tax' => 13.00],
+            ['name' => 'Morocco', 'iso_code' => 'MA', 'interest_tax' => 20.00],
+            ['name' => 'Algeria', 'iso_code' => 'DZ', 'interest_tax' => 19.00],
+            ['name' => 'Tunisia', 'iso_code' => 'TN', 'interest_tax' => 19.00],
+            ['name' => 'Israel', 'iso_code' => 'IL', 'interest_tax' => 17.00],
+        ];
+
+        foreach ($extra as $row) {
+            $iso = $row['iso_code'];
+            if (DB::table('countries')->where('iso_code', $iso)->exists()) {
+                continue;
+            }
+            DB::table('countries')->insert([
+                'name' => $row['name'],
+                'iso_code' => $iso,
+                'phone_code' => $phoneCodes[$iso] ?? '+0',
+                'interest_tax' => $row['interest_tax'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
     }
 }

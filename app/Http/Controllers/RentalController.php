@@ -44,16 +44,31 @@ class RentalController extends Controller
 
     public function create(Request $request): Response
     {
-        $routes = ShippingRoute::query()
+        $routesQuery = ShippingRoute::query()
             ->with(['originPort.country', 'destinationPort.country'])
             ->where('route_status', 'open')
-            ->orderBy('distance')
-            ->get();
+            ->orderBy('distance');
+
+        if (! config('logistics.rental_request_show_all_open_routes', false)) {
+            $ids = $this->availabilityService->openRouteIdsWithAvailableContainerAtOrigin();
+            if ($ids !== []) {
+                $routesQuery->whereIn('id', $ids);
+            } else {
+                $routesQuery->whereRaw('1 = 0');
+            }
+        }
+
+        $routes = $routesQuery->get();
 
         $ports = Port::query()
             ->with('country')
             ->orderBy('name')
             ->get();
+
+        $readyOriginPortIds = $this->availabilityService->portIdsWithAvailableContainerAtPort();
+        $originPorts = $readyOriginPortIds === []
+            ? collect()
+            : $ports->whereIn('id', $readyOriginPortIds)->values();
 
         $isOpsUser = in_array((string) ($request->user()->role ?? ''), ['admin', 'operator', 'ops'], true);
         $pendingApprovals = $isOpsUser
@@ -103,8 +118,19 @@ class RentalController extends Controller
                 'name' => $port->name,
                 'city' => $port->city,
                 'country_name' => $port->country?->name,
+                'latitude' => $port->latitude !== null ? (float) $port->latitude : null,
+                'longitude' => $port->longitude !== null ? (float) $port->longitude : null,
                 'label' => sprintf('%s, %s', $port->name, $port->country?->name ?? 'N/A'),
             ]),
+            'origin_ports' => $originPorts->map(fn (Port $port) => [
+                'id' => $port->id,
+                'name' => $port->name,
+                'city' => $port->city,
+                'country_name' => $port->country?->name,
+                'latitude' => $port->latitude !== null ? (float) $port->latitude : null,
+                'longitude' => $port->longitude !== null ? (float) $port->longitude : null,
+                'label' => sprintf('%s, %s', $port->name, $port->country?->name ?? 'N/A'),
+            ])->values()->all(),
             'cargo_types' => [
                 ['value' => 'electronics', 'label' => 'Electronics'],
                 ['value' => 'furniture', 'label' => 'Furniture'],
@@ -134,6 +160,16 @@ class RentalController extends Controller
                 ['value' => 'eco_optimized', 'label' => 'Eco optimized routing'],
                 ['value' => 'low_emission', 'label' => 'Low emission handling'],
             ],
+            'logistics_config' => [
+                'port_operations_max_days' => (int) config('logistics.port_operations_max_days', 4),
+                'post_arrival_min_days' => (int) config('logistics.post_arrival_min_days', 1),
+                'loading_buffer_days' => 3,
+            ],
+            'routing_priority_options' => [
+                ['value' => '', 'label' => 'Auto (from SLA priority)'],
+                ['value' => 'speed', 'label' => 'Fastest sea path'],
+                ['value' => 'cost', 'label' => 'Lowest cost path'],
+            ],
             'pending_approvals' => $pendingApprovals->map(fn (Rental $rental) => [
                 'id' => $rental->id,
                 'customer' => trim(($rental->user?->first_name ?? '').' '.($rental->user?->last_name ?? '')),
@@ -147,8 +183,11 @@ class RentalController extends Controller
             'my_recent_requests' => $myRecentRequests->map(fn (Rental $rental) => [
                 'id' => $rental->id,
                 'container_serial' => $rental->container?->serial_number,
+                'container_operational_status' => $rental->container?->current_status,
                 'status' => $rental->status,
                 'payment_status' => $rental->payment_status,
+                'rejection_reason' => $rental->rejection_reason,
+                'cancellation_reason' => $rental->cancellation_reason,
                 'price' => (float) $rental->price,
                 'start_date' => $rental->start_date,
                 'end_date' => $rental->end_date,
@@ -184,19 +223,25 @@ class RentalController extends Controller
             'hazardous_material' => ['required', 'boolean'],
             'requires_escort' => ['required', 'boolean'],
             'seal_required' => ['required', 'boolean'],
+            'routing_priority' => ['nullable', 'string', 'in:speed,cost'],
         ]);
 
         $startDate = CarbonImmutable::parse($validated['start_date']);
         $endDate = CarbonImmutable::parse($validated['end_date']);
         $routeContext = $this->availabilityService->resolveRouteContext($validated);
 
-        $estimatedDays = (int) ($routeContext['estimated_days'] ?? 0);
-        if ($estimatedDays > 0) {
-            $bufferDays = 3;
-            $minEnd = $startDate->addDays($estimatedDays + $bufferDays);
+        if (! ($routeContext['path_found'] ?? true)) {
+            return response()->json([
+                'message' => 'No open shipping route connects the selected ports. Choose another pair or contact operations.',
+            ], 422);
+        }
+
+        $spanDays = (int) ($routeContext['min_rental_span_days'] ?? 0);
+        if ($spanDays > 0) {
+            $minEnd = $startDate->addDays($spanDays);
             if ($endDate->lt($minEnd)) {
                 return response()->json([
-                    'message' => 'Rental period must be at least '.($estimatedDays + $bufferDays).' days for this route.',
+                    'message' => 'Rental period must cover transit, port handling, and post-arrival buffer (minimum '.$spanDays.' days from start for this routing).',
                 ], 422);
             }
         }
@@ -246,6 +291,8 @@ class RentalController extends Controller
                 (bool) ($validated['requires_escort'] ?? false),
                 (bool) ($validated['seal_required'] ?? false)
             );
+            $priceBreakdown['route_legs'] = $routeContext['route_legs'] ?? [];
+            $priceBreakdown['routing_mode'] = $routeContext['routing_mode'] ?? null;
             $estimatedPrice = (float) $priceBreakdown['estimated_total'];
         }
 
@@ -255,6 +302,7 @@ class RentalController extends Controller
                 'id' => $container->id,
                 'serial_number' => $container->serial_number,
                 'type' => $container->type,
+                'current_status' => $container->current_status,
                 'owner_name' => $container->owner?->name,
                 'country_name' => $container->currentPort?->country?->name,
                 'current_port_name' => $container->currentPort?->name,
@@ -273,6 +321,13 @@ class RentalController extends Controller
         $startDate = CarbonImmutable::parse($validated['start_date']);
         $endDate = CarbonImmutable::parse($validated['end_date']);
         $routeContext = $this->availabilityService->resolveRouteContext($validated);
+
+        if (! ($routeContext['path_found'] ?? true)) {
+            return back()->withErrors([
+                'route_mode' => 'No open shipping route is available for the selected ports.',
+            ]);
+        }
+
         $selectedContainerId = (int) $validated['container_id'];
 
         $availableContainers = $this->availabilityService->findAvailableContainers(
@@ -314,6 +369,8 @@ class RentalController extends Controller
             (bool) ($validated['requires_escort'] ?? false),
             (bool) ($validated['seal_required'] ?? false)
         );
+        $priceBreakdown['route_legs'] = $routeContext['route_legs'] ?? [];
+        $priceBreakdown['routing_mode'] = $routeContext['routing_mode'] ?? null;
 
         $rental = DB::transaction(function () use ($request, $validated, $routeContext, $startDate, $endDate, $priceBreakdown, $selectedContainerId) {
             $created = Rental::query()->create([
@@ -332,6 +389,7 @@ class RentalController extends Controller
                 'package_count' => isset($validated['package_count']) ? (int) $validated['package_count'] : null,
                 'cargo_value' => isset($validated['cargo_value']) ? (float) $validated['cargo_value'] : null,
                 'priority' => $validated['priority'],
+                'routing_priority' => ! empty($validated['routing_priority']) ? (string) $validated['routing_priority'] : null,
                 'incoterm' => $validated['incoterm'] ?? null,
                 'loading_type' => $validated['loading_type'],
                 'delivery_mode' => $validated['delivery_mode'],
@@ -512,6 +570,8 @@ class RentalController extends Controller
             'rental' => [
                 'id' => $rental->id,
                 'status' => $rental->status,
+                'rejection_reason' => $rental->rejection_reason,
+                'cancellation_reason' => $rental->cancellation_reason,
                 'is_telemetry_active' => (bool) $rental->is_telemetry_active,
                 'payment_status' => $rental->payment_status,
                 'start_date' => $rental->start_date,
@@ -658,6 +718,7 @@ class RentalController extends Controller
                 'reviewed_by' => $rental->reviewed_by,
                 'reviewed_at' => $rental->reviewed_at,
                 'rejection_reason' => $rental->rejection_reason,
+                'cancellation_reason' => $rental->cancellation_reason,
             ];
 
             $rental->status = $nextStatus;
@@ -669,9 +730,16 @@ class RentalController extends Controller
                 $rental->payment_status = $validated['payment_status'];
             }
 
-            $rental->rejection_reason = $nextStatus === 'rejected'
-                ? $validated['rejection_reason']
-                : null;
+            if ($nextStatus === 'rejected') {
+                $rental->rejection_reason = $validated['rejection_reason'] ?? null;
+                $rental->cancellation_reason = null;
+            } elseif ($nextStatus === 'cancelled') {
+                $rental->cancellation_reason = $validated['cancellation_reason'] ?? null;
+                $rental->rejection_reason = null;
+            } else {
+                $rental->rejection_reason = null;
+                $rental->cancellation_reason = null;
+            }
 
             $rental->save();
 

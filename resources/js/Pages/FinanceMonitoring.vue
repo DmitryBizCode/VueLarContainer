@@ -1,4 +1,5 @@
 <script setup>
+import Modal from '@/Components/Modal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
@@ -35,6 +36,26 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    transactionsByStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rentalsByStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rentalsByPaymentStatus: {
+        type: Object,
+        default: () => ({}),
+    },
+    rejectedApproval: {
+        type: Object,
+        default: () => ({ count: 0, lostRevenuePriceSum: 0, txAmountSum: 0 }),
+    },
+    syntheticTransactions: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const filterState = reactive({
@@ -45,7 +66,10 @@ const filterState = reactive({
     q: props.filters.q ?? '',
 });
 
-const transactionRows = computed(() => props.transactions?.data ?? []);
+const transactionRows = computed(() => [
+    ...(props.syntheticTransactions ?? []),
+    ...(props.transactions?.data ?? []),
+]);
 const paginationLinks = computed(() => props.transactions?.links ?? []);
 
 const statusOptions = [
@@ -107,6 +131,10 @@ const statusBadgeClass = (status) => {
         return 'border-rose-200 bg-rose-50 text-rose-700';
     }
 
+    if (normalized === 'cancelled') {
+        return 'border-orange-200 bg-orange-50 text-orange-800';
+    }
+
     return 'border-slate-200 bg-slate-50 text-slate-700';
 };
 
@@ -137,6 +165,39 @@ const resetFilters = () => {
 
 const isSyntheticLedgerRef = (externalId) =>
     Boolean(props.synthetic_ledger_prefix && String(externalId || '').startsWith(props.synthetic_ledger_prefix));
+
+const txNotesModal = reactive({
+    show: false,
+    title: '',
+    body: '',
+});
+
+const hasTransactionNotes = (item) =>
+    Boolean(
+        item.status_note?.trim()
+        || item.refund_reason?.trim()
+        || item.rental_rejection_reason?.trim()
+    );
+
+const openTransactionNotes = (item) => {
+    const parts = [];
+    if (item.status_note?.trim()) {
+        parts.push(`Operations note: ${item.status_note.trim()}`);
+    }
+    if (item.refund_reason?.trim()) {
+        parts.push(`Refund / adjustment: ${item.refund_reason.trim()}`);
+    }
+    if (item.rental_rejection_reason?.trim()) {
+        parts.push(`Linked rental note: ${item.rental_rejection_reason.trim()}`);
+    }
+    txNotesModal.title = `Transaction #${item.id}`;
+    txNotesModal.body = parts.length ? parts.join('\n\n') : 'No additional notes on file for this transaction.';
+    txNotesModal.show = true;
+};
+
+const closeTransactionNotes = () => {
+    txNotesModal.show = false;
+};
 </script>
 
 <template>
@@ -179,6 +240,78 @@ const isSyntheticLedgerRef = (externalId) =>
                             <p class="mt-2 text-2xl font-extrabold text-slate-900">{{ props.overview.totalTransactions }}</p>
                             <p class="mt-1 text-xs text-slate-500">After current filters</p>
                         </div>
+                    </div>
+                </section>
+
+                <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Rejected (approval)</h2>
+                            <p class="mt-0.5 text-xs text-slate-500">Tracked separately from payment failures.</p>
+                        </div>
+                        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                            {{ props.rejectedApproval.count ?? 0 }} rentals
+                        </span>
+                    </div>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Lost revenue (price)</p>
+                            <p class="mt-2 text-xl font-extrabold text-slate-900">{{ formatMoney(props.rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tx volume</p>
+                            <p class="mt-2 text-xl font-extrabold text-slate-900">{{ formatMoney(props.rejectedApproval.txAmountSum ?? 0) }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-6 grid gap-4 lg:grid-cols-3">
+                    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Transactions by status</h2>
+                        <p class="mt-1 text-xs text-slate-500">After current filters.</p>
+                        <div v-if="Object.keys(props.transactionsByStatus || {}).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(row, status) in props.transactionsByStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No transactions yet.</p>
+                    </div>
+
+                    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Rentals by status</h2>
+                        <p class="mt-1 text-xs text-slate-500">Your rentals distribution.</p>
+                        <div v-if="Object.keys(props.rentalsByStatus || {}).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(row, status) in props.rentalsByStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
+                    </div>
+
+                    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-900">Rentals by payment status</h2>
+                        <p class="mt-1 text-xs text-slate-500">Payment state across rentals.</p>
+                        <div v-if="Object.keys(props.rentalsByPaymentStatus || {}).length" class="mt-3 space-y-2">
+                            <div
+                                v-for="(row, status) in props.rentalsByPaymentStatus"
+                                :key="status"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                            >
+                                <span class="font-semibold text-slate-700">{{ status }}</span>
+                                <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                            </div>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
                     </div>
                 </section>
 
@@ -269,9 +402,19 @@ const isSyntheticLedgerRef = (externalId) =>
                                     <td class="px-3 py-3 font-semibold text-slate-900">{{ formatMoney(item.amount, item.currency) }}</td>
                                     <td class="px-3 py-3 text-slate-600">{{ item.payment_method || '—' }}</td>
                                     <td class="px-3 py-3">
-                                        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize" :class="statusBadgeClass(item.status)">
-                                            {{ item.status || 'unknown' }}
-                                        </span>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize" :class="statusBadgeClass(item.status)">
+                                                {{ item.status || 'unknown' }}
+                                            </span>
+                                            <button
+                                                v-if="hasTransactionNotes(item)"
+                                                type="button"
+                                                class="text-xs font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2 hover:text-blue-900"
+                                                @click="openTransactionNotes(item)"
+                                            >
+                                                Notes
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -297,6 +440,14 @@ const isSyntheticLedgerRef = (externalId) =>
                                 Manual ledger
                             </span>
                             <p class="mt-1 text-sm font-semibold text-slate-900">{{ formatMoney(item.amount, item.currency) }}</p>
+                            <button
+                                v-if="hasTransactionNotes(item)"
+                                type="button"
+                                class="mt-2 text-xs font-semibold text-blue-700 underline decoration-blue-200"
+                                @click="openTransactionNotes(item)"
+                            >
+                                Payment notes
+                            </button>
                         </div>
                     </div>
 
@@ -319,5 +470,21 @@ const isSyntheticLedgerRef = (externalId) =>
                 </section>
             </div>
         </div>
+
+        <Modal :show="txNotesModal.show" max-width="md" @close="closeTransactionNotes">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-slate-900">{{ txNotesModal.title }}</h3>
+                <p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ txNotesModal.body }}</p>
+                <div class="mt-5 flex justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                        @click="closeTransactionNotes"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

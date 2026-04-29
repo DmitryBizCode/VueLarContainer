@@ -4,6 +4,7 @@ import InputError from '@/Components/InputError.vue';
 import PhoneInputWithCountry from '@/Components/Rentals/PhoneInputWithCountry.vue';
 import PriceBreakdownCard from '@/Components/Rentals/PriceBreakdownCard.vue';
 import RouteSelectorCard from '@/Components/Rentals/RouteSelectorCard.vue';
+import Modal from '@/Components/Modal.vue';
 import { useToast } from '@/composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -37,6 +38,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    origin_ports: {
+        type: Array,
+        default: () => [],
+    },
     cargo_types: {
         type: Array,
         default: () => [],
@@ -65,6 +70,18 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    logistics_config: {
+        type: Object,
+        default: () => ({
+            port_operations_max_days: 4,
+            post_arrival_min_days: 1,
+            loading_buffer_days: 3,
+        }),
+    },
+    routing_priority_options: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const form = useForm({
@@ -82,6 +99,7 @@ const form = useForm({
     package_count: '',
     cargo_value: '',
     priority: 'normal',
+    routing_priority: '',
     incoterm: '',
     loading_type: 'fcl',
     delivery_mode: 'port_to_port',
@@ -116,8 +134,60 @@ const previewState = reactive({
     processingApprovalId: null,
 });
 
+const statusLabelRequest = (value) => {
+    if (!value) return 'Unknown';
+
+    return String(value).replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const statusDetailEligibleRequest = (item) => {
+    const st = String(item.status || '').toLowerCase();
+
+    return (
+        ['draft', 'pending_approval', 'rejected', 'cancelled'].includes(st)
+        || Boolean(item.rejection_reason?.trim())
+        || Boolean(item.cancellation_reason?.trim())
+    );
+};
+
+const reasonModalRequest = reactive({
+    show: false,
+    title: '',
+    body: '',
+});
+
+const openStatusDetailRequest = (item) => {
+    const st = String(item.status || '').toLowerCase();
+    const lines = [];
+
+    if (item.container_operational_status) {
+        lines.push(`Equipment status: ${statusLabelRequest(item.container_operational_status)}`);
+    }
+
+    if (st === 'rejected') {
+        lines.push(item.rejection_reason?.trim() || 'No rejection reason was recorded.');
+    } else if (st === 'cancelled') {
+        lines.push(item.cancellation_reason?.trim() || 'No cancellation notes were recorded.');
+    } else if (st === 'pending_approval') {
+        lines.push('Awaiting operations review — you will be notified when the request is approved or rejected.');
+    } else if (st === 'draft') {
+        lines.push('Draft — complete and submit the rental request when ready.');
+    } else if (item.rejection_reason?.trim()) {
+        lines.push(`Previous rejection note: ${item.rejection_reason.trim()}`);
+    } else if (item.cancellation_reason?.trim()) {
+        lines.push(`Cancellation note: ${item.cancellation_reason.trim()}`);
+    }
+
+    reasonModalRequest.title = `Request #${item.id} · ${statusLabelRequest(item.status)}`;
+    reasonModalRequest.body = lines.join('\n\n');
+    reasonModalRequest.show = true;
+};
+
+const closeReasonModalRequest = () => {
+    reasonModalRequest.show = false;
+};
+
 const LOADING_BUFFER_DAYS = 3;
-const UNLOADING_BUFFER_DAYS = 3;
 
 /** Match Laravel `CarbonImmutable` in UTC: add whole calendar days to an ISO `YYYY-MM-DD`. */
 function addUtcCalendarDays(isoDate, daysToAdd) {
@@ -138,6 +208,11 @@ const estimatedDaysFromRoute = computed(() => {
         return route?.estimated_days ?? 1;
     }
     if (form.route_mode === 'ports' && form.origin_port_id && form.destination_port_id) {
+        const ctx = previewState.routeContext;
+        const d = Number(ctx?.estimated_days);
+        if (ctx && ctx.path_found !== false && !Number.isNaN(d) && d > 0) {
+            return d;
+        }
         const route = props.routes.find(
             (r) =>
                 String(r.origin_port_id) === String(form.origin_port_id) &&
@@ -150,9 +225,22 @@ const estimatedDaysFromRoute = computed(() => {
 
 const minStartDate = computed(() => addUtcCalendarDays(new Date().toISOString().slice(0, 10), LOADING_BUFFER_DAYS));
 
+const minEndSpanDays = computed(() => {
+    const span = Number(previewState.routeContext?.min_rental_span_days);
+    if (!Number.isNaN(span) && span > 0) {
+        return span;
+    }
+    const lg = props.logistics_config || {};
+    return (
+        estimatedDaysFromRoute.value +
+        Number(lg.port_operations_max_days ?? 4) +
+        Number(lg.post_arrival_min_days ?? 1)
+    );
+});
+
 const minEndDate = computed(() => {
     const baseStart = form.start_date && form.start_date > minStartDate.value ? form.start_date : minStartDate.value;
-    return addUtcCalendarDays(baseStart, estimatedDaysFromRoute.value + UNLOADING_BUFFER_DAYS);
+    return addUtcCalendarDays(baseStart, minEndSpanDays.value);
 });
 
 const canPreview = computed(() => {
@@ -218,6 +306,7 @@ const runPreview = async () => {
             hazardous_material: Boolean(form.hazardous_material),
             requires_escort: Boolean(form.requires_escort),
             seal_required: Boolean(form.seal_required),
+            routing_priority: form.routing_priority || null,
         };
 
         const response = await window.axios.post(route('rentals.request.preview', {}, false), payload);
@@ -249,6 +338,10 @@ const runPreview = async () => {
             (typeof data?.message === 'string' && data.message) ||
             fromErrors ||
             'Could not calculate preview for current inputs.';
+        previewState.routeContext = {};
+        previewState.availableContainers = [];
+        previewState.estimatedPrice = 0;
+        previewState.priceBreakdown = null;
         previewState.previewError = message;
         showError('Preview failed', message);
     } finally {
@@ -299,6 +392,7 @@ watch(
         form.package_count,
         form.cargo_value,
         form.priority,
+        form.routing_priority,
         form.delivery_mode,
         form.loading_type,
         form.sustainability_pref,
@@ -414,6 +508,7 @@ const submit = () => {
                         <RouteSelectorCard
                             :routes="props.routes"
                             :ports="props.ports"
+                            :origin-ports="props.origin_ports"
                             :route-mode="form.route_mode"
                             :route-id="form.route_id"
                             :origin-port-id="form.origin_port_id"
@@ -431,6 +526,28 @@ const submit = () => {
                             @update:end-date="form.end_date = $event"
                             @update:requested-weight="form.requested_weight = $event"
                         />
+
+                        <div
+                            v-if="props.routing_priority_options.length"
+                            class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        >
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Sea routing</p>
+                            <p class="mt-1 text-sm text-slate-600">
+                                When no direct lane exists, we search the open route graph. Override how that path is chosen.
+                            </p>
+                            <select
+                                v-model="form.routing_priority"
+                                class="mt-3 w-full rounded-xl border-slate-200 text-sm shadow-sm focus:border-blue-700 focus:ring-blue-700"
+                            >
+                                <option
+                                    v-for="opt in props.routing_priority_options"
+                                    :key="opt.value === '' || opt.value == null ? 'auto' : opt.value"
+                                    :value="opt.value"
+                                >
+                                    {{ opt.label }}
+                                </option>
+                            </select>
+                        </div>
                         </div>
 
                         <section v-show="currentStep === 2" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -740,6 +857,7 @@ const submit = () => {
 
                     <div class="space-y-6">
                         <PriceBreakdownCard
+                            :ports="props.ports"
                             :estimated-price="previewState.estimatedPrice"
                             :route-context="previewState.routeContext"
                             :price-breakdown="previewState.priceBreakdown"
@@ -815,10 +933,22 @@ const submit = () => {
                                 <span class="text-xs font-semibold text-slate-600">{{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(Number(item.price || 0)) }}</span>
                             </div>
                             <p class="mt-1 text-xs text-slate-600">{{ item.container_serial || 'Container not assigned' }}</p>
+                            <p class="mt-0.5 text-[11px] text-slate-500">
+                                Equipment:
+                                {{ item.container_operational_status ? statusLabelRequest(item.container_operational_status) : '—' }}
+                            </p>
                             <p class="mt-1 text-xs text-slate-500">{{ item.start_date && item.end_date ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(item.start_date)) + ' → ' + new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(item.end_date)) : '—' }}</p>
+                            <button
+                                v-if="statusDetailEligibleRequest(item)"
+                                type="button"
+                                class="mt-1 text-left text-[11px] font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2"
+                                @click="openStatusDetailRequest(item)"
+                            >
+                                Status notes
+                            </button>
                             <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                                <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold text-slate-700">{{ String(item.status || '').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
-                                <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold text-slate-700">{{ String(item.payment_status || '').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+                                <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold text-slate-700">{{ statusLabelRequest(item.status) }}</span>
+                                <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold text-slate-700">{{ statusLabelRequest(item.payment_status) }}</span>
                                 <Link
                                     v-if="item.can_view_iot_monitor"
                                     :href="route('rentals.monitor', item.id, false)"
@@ -839,5 +969,21 @@ const submit = () => {
                 </section>
             </div>
         </div>
+
+        <Modal :show="reasonModalRequest.show" max-width="md" @close="closeReasonModalRequest">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-slate-900">{{ reasonModalRequest.title }}</h3>
+                <p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ reasonModalRequest.body }}</p>
+                <div class="mt-5 flex justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                        @click="closeReasonModalRequest"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

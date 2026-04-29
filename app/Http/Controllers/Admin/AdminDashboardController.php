@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
 use App\Models\RequestLog;
+use App\Support\FinanceStatusGroups;
 use App\Support\PathLabelHelper;
 use App\Support\RequestContextHelper;
 use Illuminate\Http\Request;
@@ -17,8 +18,10 @@ class AdminDashboardController extends Controller
 {
     public function index(Request $request): Response
     {
+        $txGroups = FinanceStatusGroups::transactionGroups();
+
         $rentalsByStatus = DB::table('rentals')
-            ->selectRaw('status, COUNT(*) as count')
+            ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->all();
@@ -41,17 +44,70 @@ class AdminDashboardController extends Controller
             ->pluck('count', 'role')
             ->all();
 
-        $finance = DB::table('transactions')
-            ->selectRaw("
-                COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid','completed','succeeded','success') THEN amount ELSE 0 END), 0) as paid_amount,
-                COALESCE(SUM(CASE WHEN LOWER(status) IN ('pending','processing') THEN amount ELSE 0 END), 0) as pending_amount,
-                COALESCE(SUM(CASE WHEN LOWER(status) = 'failed' THEN amount ELSE 0 END), 0) as failed_amount,
-                COUNT(CASE WHEN LOWER(status) IN ('paid','completed','succeeded','success') THEN 1 END) as paid_count,
-                COUNT(CASE WHEN LOWER(status) IN ('pending','processing') THEN 1 END) as pending_count,
-                COUNT(CASE WHEN LOWER(status) = 'failed' THEN 1 END) as failed_count,
-                COUNT(*) as total_transactions
-            ")
-            ->first();
+        $transactionsByStatus = DB::table('transactions')
+            ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(amount), 0) as amount_sum')
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->mapWithKeys(fn ($r) => [
+                (string) $r->status => [
+                    'count' => (int) $r->count,
+                    'amount_sum' => (float) $r->amount_sum,
+                ],
+            ])
+            ->all();
+
+        $successAmount = 0.0;
+        $pendingAmount = 0.0;
+        $failureAmount = 0.0;
+        $successCount = 0;
+        $pendingCount = 0;
+        $failureCount = 0;
+        foreach ($transactionsByStatus as $status => $row) {
+            if (in_array($status, $txGroups['success'], true)) {
+                $successAmount += (float) ($row['amount_sum'] ?? 0);
+                $successCount += (int) ($row['count'] ?? 0);
+            } elseif (in_array($status, $txGroups['pending'], true)) {
+                $pendingAmount += (float) ($row['amount_sum'] ?? 0);
+                $pendingCount += (int) ($row['count'] ?? 0);
+            } elseif (in_array($status, $txGroups['failure'], true)) {
+                $failureAmount += (float) ($row['amount_sum'] ?? 0);
+                $failureCount += (int) ($row['count'] ?? 0);
+            }
+        }
+        $totalTransactions = array_sum(array_map(fn ($r) => (int) ($r['count'] ?? 0), $transactionsByStatus));
+
+        $syntheticPendingApproval = DB::table('rentals')
+            ->whereRaw('LOWER(status) = ?', ['pending_approval'])
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('transactions')
+                    ->whereColumn('transactions.rental_id', 'rentals.id');
+            });
+        $syntheticPendingApprovalAmount = (float) $syntheticPendingApproval->sum('price');
+        $syntheticPendingApprovalCount = (int) $syntheticPendingApproval->count();
+
+        $rentalsByPaymentStatus = DB::table('rentals')
+            ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
+            ->groupBy('payment_status')
+            ->orderBy('payment_status')
+            ->get()
+            ->mapWithKeys(fn ($r) => [
+                (string) $r->payment_status => [
+                    'count' => (int) $r->count,
+                    'price_sum' => (float) $r->price_sum,
+                ],
+            ])
+            ->all();
+
+        $rejectedApproval = [
+            'count' => (int) ($rentalsByPaymentStatus['rejected_by_approval']['count'] ?? 0),
+            'lostRevenuePriceSum' => (float) ($rentalsByPaymentStatus['rejected_by_approval']['price_sum'] ?? 0),
+            'txAmountSum' => (float) DB::table('transactions')
+                ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
+                ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
+                ->sum('transactions.amount'),
+        ];
 
         $activityLogsToday = DB::table('activity_logs')
             ->whereDate('created_at', today())
@@ -149,13 +205,16 @@ class AdminDashboardController extends Controller
                 'ownersCount' => $ownersCount,
                 'usersTotal' => $usersTotal,
                 'usersByRole' => $usersByRole,
-                'paidAmount' => (float) ($finance->paid_amount ?? 0),
-                'pendingAmount' => (float) ($finance->pending_amount ?? 0),
-                'failedAmount' => (float) ($finance->failed_amount ?? 0),
-                'paidCount' => (int) ($finance->paid_count ?? 0),
-                'pendingCount' => (int) ($finance->pending_count ?? 0),
-                'failedCount' => (int) ($finance->failed_count ?? 0),
-                'totalTransactions' => (int) ($finance->total_transactions ?? 0),
+                'paidAmount' => (float) $successAmount,
+                'pendingAmount' => (float) ($pendingAmount + $syntheticPendingApprovalAmount),
+                'failedAmount' => (float) ($failureAmount + $rejectedApproval['lostRevenuePriceSum']),
+                'paidCount' => (int) $successCount,
+                'pendingCount' => (int) ($pendingCount + $syntheticPendingApprovalCount),
+                'failedCount' => (int) ($failureCount + $rejectedApproval['count']),
+                'totalTransactions' => (int) ($totalTransactions + $syntheticPendingApprovalCount),
+                'transactionsByStatus' => $transactionsByStatus,
+                'rentalsByPaymentStatus' => $rentalsByPaymentStatus,
+                'rejectedApproval' => $rejectedApproval,
                 'activityLogsToday' => $activityLogsToday,
                 'activityLogsTotal' => $activityLogsTotal,
                 'requestLogsToday' => $requestLogsToday,

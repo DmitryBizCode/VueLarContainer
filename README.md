@@ -69,11 +69,19 @@ docker compose exec php php artisan migrate --force
 docker compose exec php php artisan db:seed
 ```
 
+Після зміни `package.json` (наприклад додали `leaflet`) оновіть залежності на хості проєкту або одним запуском Node-контейнера:
+
+```bash
+docker compose run --rm --no-deps node sh -c "npm install"
+```
+
+Сервіс `node` при старті виконує `npm install` і `npm run dev` (анонімного volume для `node_modules` більше немає — залежності лежать у `./node_modules` у проєкті).
+
 - Додаток: `http://localhost` (порт змінюється через `NGINX_HTTP_PORT` у `.env`)
 - Vite: `http://localhost:5173`
-- Після `db:seed` можна увійти як **`demo@example.com`** / **`password`** (клієнт; оренди створюються через форму заявки, IoT Monitor доступний лише після апруву адміном) або як адмін із `DemoAccountSeeder` (наприклад **`romeobackend@gmail.com`** / **`123456789`**).
+- Після `db:seed` можна увійти як **`demo@example.com`** / **`password`** (клієнт; у базі також є демо-оренди з `[demo-seed]` — карта / центр оренд) або як адмін із `DemoAccountSeeder` (**`romeobackend@gmail.com`** / **`123456789`**).
 
-Повністю скинути БД і named volumes (дані в Postgres зникають):
+Повністю скинути БД і named volumes (дані в Postgres / Redis / pgAdmin зникають):
 
 ```bash
 docker compose down -v --remove-orphans

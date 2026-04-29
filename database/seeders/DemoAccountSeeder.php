@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Local / demo logins. Rentals are created through the app flow, not seeded.
+ * Local / demo logins. Sample rentals may be added by {@see MaritimeDemoSeeder}.
  */
 class DemoAccountSeeder extends Seeder
 {

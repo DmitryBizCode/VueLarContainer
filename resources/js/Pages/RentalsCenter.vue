@@ -1,4 +1,6 @@
 <script setup>
+import PortsMapLeaflet from '@/Components/Logistics/PortsMapLeaflet.vue';
+import Modal from '@/Components/Modal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
@@ -44,6 +46,10 @@ const paginationLinks = computed(() => props.rentals?.links ?? []);
 
 const rentalStatusOptions = [
     { value: '', label: 'All rental statuses' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'pending_approval', label: 'Pending approval' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
     { value: 'scheduled', label: 'Scheduled' },
     { value: 'active', label: 'Active' },
     { value: 'in_progress', label: 'In progress' },
@@ -84,6 +90,30 @@ const formatDate = (value) => {
     }).format(new Date(value));
 };
 
+const isExpired = (item) => {
+    const end = item?.end_date ? new Date(item.end_date).getTime() : NaN;
+    if (!Number.isFinite(end)) return false;
+    return end < Date.now();
+};
+
+const iotUnavailableLabel = (item) => {
+    if (isExpired(item)) return 'Rental expired';
+
+    const rentalStatus = String(item?.status || '').toLowerCase();
+    const paymentStatus = String(item?.payment_status || '').toLowerCase();
+    const hasIot = Boolean(item?.container_iot_active);
+
+    if (rentalStatus === 'rejected') {
+        return paymentStatus === 'rejected_by_approval' ? 'Rejected (approval)' : 'Rejected';
+    }
+    if (rentalStatus === 'cancelled') return 'Cancelled';
+    if (rentalStatus === 'draft') return 'Draft';
+    if (rentalStatus === 'pending_approval') return 'Awaiting approval';
+    if (!hasIot) return 'IoT disabled';
+
+    return 'IoT unavailable';
+};
+
 const formatMoney = (value, currency = 'USD') => {
     const amount = Number(value ?? 0);
     const safeCurrency = String(currency || 'USD').toUpperCase();
@@ -104,15 +134,26 @@ const statusDotClass = (kind, value) => {
 
     if (kind === 'rental') {
         if (['active', 'in_progress'].includes(normalized)) return 'bg-emerald-500';
+        if (['approved'].includes(normalized)) return 'bg-sky-500';
         if (['scheduled'].includes(normalized)) return 'bg-blue-500';
+        if (['pending_approval'].includes(normalized)) return 'bg-amber-500';
+        if (['draft'].includes(normalized)) return 'bg-slate-400';
+        if (['rejected'].includes(normalized)) return 'bg-rose-600';
         if (['completed'].includes(normalized)) return 'bg-slate-500';
-        if (['cancelled'].includes(normalized)) return 'bg-rose-500';
+        if (['cancelled'].includes(normalized)) return 'bg-orange-600';
     }
 
     if (kind === 'payment') {
         if (['paid'].includes(normalized)) return 'bg-emerald-500';
         if (['pending', 'unpaid'].includes(normalized)) return 'bg-amber-500';
         if (['failed'].includes(normalized)) return 'bg-rose-500';
+        if (['cancelled'].includes(normalized)) return 'bg-orange-600';
+    }
+
+    if (kind === 'container') {
+        if (['available', 'idle'].includes(normalized)) return 'bg-slate-400';
+        if (['in_use', 'in_transit', 'assigned'].includes(normalized)) return 'bg-blue-500';
+        if (['maintenance', 'damaged'].includes(normalized)) return 'bg-amber-600';
     }
 
     if (kind === 'shipment') {
@@ -168,6 +209,52 @@ const resetFilters = () => {
     filterState.q = '';
     applyFilters();
 };
+
+const statusDetailEligible = (item) => {
+    const st = String(item.status || '').toLowerCase();
+    return (
+        ['draft', 'pending_approval', 'rejected', 'cancelled'].includes(st)
+        || Boolean(item.rejection_reason?.trim())
+        || Boolean(item.cancellation_reason?.trim())
+    );
+};
+
+const reasonModal = reactive({
+    show: false,
+    title: '',
+    body: '',
+});
+
+const openStatusDetail = (item) => {
+    const st = String(item.status || '').toLowerCase();
+    const lines = [];
+
+    if (item.container_operational_status) {
+        lines.push(`Equipment status: ${statusLabel(item.container_operational_status)}`);
+    }
+
+    if (st === 'rejected') {
+        lines.push(item.rejection_reason?.trim() || 'No rejection reason was recorded.');
+    } else if (st === 'cancelled') {
+        lines.push(item.cancellation_reason?.trim() || 'No cancellation notes were recorded.');
+    } else if (st === 'pending_approval') {
+        lines.push('Awaiting operations review — you will be notified when the request is approved or rejected.');
+    } else if (st === 'draft') {
+        lines.push('Draft — complete and submit the rental request when ready.');
+    } else if (item.rejection_reason?.trim()) {
+        lines.push(`Previous rejection note: ${item.rejection_reason.trim()}`);
+    } else if (item.cancellation_reason?.trim()) {
+        lines.push(`Cancellation note: ${item.cancellation_reason.trim()}`);
+    }
+
+    reasonModal.title = `Rental #${item.id} · ${statusLabel(item.status)}`;
+    reasonModal.body = lines.join('\n\n');
+    reasonModal.show = true;
+};
+
+const closeReasonModal = () => {
+    reasonModal.show = false;
+};
 </script>
 
 <template>
@@ -211,6 +298,10 @@ const resetFilters = () => {
                             <p class="mt-1 text-xs text-slate-500">Next 7 days</p>
                         </div>
                     </div>
+                </section>
+
+                <section class="mb-6">
+                    <PortsMapLeaflet />
                 </section>
 
                 <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -290,6 +381,7 @@ const resetFilters = () => {
                                     <th class="px-3 py-3 text-right">IoT</th>
                                 </tr>
                             </thead>
+                            <caption class="sr-only">Operations rentals list</caption>
                             <tbody>
                                 <tr
                                     v-for="item in rows"
@@ -303,25 +395,49 @@ const resetFilters = () => {
                                     <td class="px-3 py-3">
                                         <p class="font-semibold text-slate-800">{{ item.container_serial_number }}</p>
                                         <p class="text-xs text-slate-500">{{ statusLabel(item.container_type) }}</p>
+                                        <p class="mt-1 inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                                            <span
+                                                v-if="item.container_operational_status"
+                                                class="h-2 w-2 shrink-0 rounded-full"
+                                                :class="statusDotClass('container', item.container_operational_status)"
+                                            />
+                                            <span>Equipment: {{ item.container_operational_status ? statusLabel(item.container_operational_status) : '—' }}</span>
+                                        </p>
                                         <p class="mt-1 text-[11px] text-slate-500">IoT: {{ item.container_iot_active ? 'enabled' : 'disabled' }}</p>
+                                        <button
+                                            v-if="statusDetailEligible(item)"
+                                            type="button"
+                                            class="mt-2 text-left text-[11px] font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2 hover:text-blue-900"
+                                            @click="openStatusDetail(item)"
+                                        >
+                                            Status notes
+                                        </button>
                                     </td>
                                     <td class="px-3 py-3 text-slate-600">
                                         <p class="text-xs">Start: {{ formatDate(item.start_date) }}</p>
-                                        <p class="text-xs">End: {{ formatDate(item.end_date) }}</p>
+                                        <p class="text-xs inline-flex items-center gap-2">
+                                            <span>End: {{ formatDate(item.end_date) }}</span>
+                                            <span
+                                                v-if="isExpired(item)"
+                                                class="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700"
+                                            >
+                                                Expired
+                                            </span>
+                                        </p>
                                     </td>
                                     <td class="px-3 py-3">
                                         <div class="space-y-1.5 text-xs text-slate-700">
                                             <p class="inline-flex items-center gap-1.5">
                                                 <span class="h-2 w-2 rounded-full" :class="statusDotClass('rental', item.status)" />
-                                                {{ statusLabel(item.status) }}
+                                                <span class="font-semibold">Rental</span>: {{ statusLabel(item.status) }}
                                             </p>
                                             <p class="inline-flex items-center gap-1.5">
                                                 <span class="h-2 w-2 rounded-full" :class="statusDotClass('payment', item.payment_status)" />
-                                                {{ statusLabel(item.payment_status) }}
+                                                <span class="font-semibold">Payment</span>: {{ statusLabel(item.payment_status) }}
                                             </p>
                                             <p class="inline-flex items-center gap-1.5">
                                                 <span class="h-2 w-2 rounded-full" :class="statusDotClass('shipment', item.shipment_status)" />
-                                                {{ statusLabel(item.shipment_status) }}
+                                                <span class="font-semibold">Shipment</span>: {{ statusLabel(item.shipment_status) }}
                                             </p>
                                         </div>
                                     </td>
@@ -335,7 +451,7 @@ const resetFilters = () => {
                                     </td>
                                     <td class="px-3 py-3 text-right">
                                         <Link
-                                            v-if="item.can_view_iot_monitor"
+                                            v-if="item.can_view_iot_monitor && !isExpired(item)"
                                             :href="route('rentals.monitor', item.id)"
                                             class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold"
                                             :class="item.container_iot_active ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
@@ -350,7 +466,7 @@ const resetFilters = () => {
                                             v-else
                                             class="inline-flex rounded-full border border-dashed border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500"
                                         >
-                                            IoT after approval
+                                            {{ iotUnavailableLabel(item) }}
                                         </span>
                                     </td>
                                 </tr>
@@ -368,6 +484,22 @@ const resetFilters = () => {
                                 <p class="text-sm font-semibold text-slate-900">{{ formatMoney(item.price) }}</p>
                             </div>
 
+                            <p class="mt-2 inline-flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                                <span
+                                    v-if="item.container_operational_status"
+                                    class="h-2 w-2 shrink-0 rounded-full"
+                                    :class="statusDotClass('container', item.container_operational_status)"
+                                />
+                                <span>Equipment: {{ item.container_operational_status ? statusLabel(item.container_operational_status) : '—' }}</span>
+                            </p>
+                            <button
+                                v-if="statusDetailEligible(item)"
+                                type="button"
+                                class="mt-1 text-left text-[11px] font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2"
+                                @click="openStatusDetail(item)"
+                            >
+                                Status notes
+                            </button>
                             <div class="mt-3 grid grid-cols-1 gap-1.5 text-xs text-slate-700">
                                 <p class="inline-flex items-center gap-1.5">
                                     <span class="h-2 w-2 rounded-full" :class="statusDotClass('rental', item.status)" />
@@ -388,7 +520,7 @@ const resetFilters = () => {
                             <p class="mt-1 text-xs text-slate-600">{{ buildRentalHint(item) }}</p>
                             <div class="mt-2 flex justify-end">
                                 <Link
-                                    v-if="item.can_view_iot_monitor"
+                                    v-if="item.can_view_iot_monitor && !isExpired(item)"
                                     :href="route('rentals.monitor', item.id)"
                                     class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
                                     :class="item.container_iot_active ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
@@ -403,7 +535,7 @@ const resetFilters = () => {
                                     v-else
                                     class="inline-flex rounded-full border border-dashed border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500"
                                 >
-                                    IoT after approval
+                                    {{ iotUnavailableLabel(item) }}
                                 </span>
                             </div>
                         </div>
@@ -428,5 +560,21 @@ const resetFilters = () => {
                 </section>
             </div>
         </div>
+
+        <Modal :show="reasonModal.show" max-width="md" @close="closeReasonModal">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-slate-900">{{ reasonModal.title }}</h3>
+                <p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ reasonModal.body }}</p>
+                <div class="mt-5 flex justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                        @click="closeReasonModal"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

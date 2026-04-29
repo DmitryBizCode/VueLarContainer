@@ -1,4 +1,7 @@
 <script setup>
+import Modal from '@/Components/Modal.vue';
+import { reactive } from 'vue';
+
 const props = defineProps({
     rental: {
         type: Object,
@@ -36,6 +39,50 @@ const statusLabel = (value) =>
     String(value || '')
         .replaceAll('_', ' ')
         .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const statusNotesModal = reactive({
+    show: false,
+    title: '',
+    body: '',
+});
+
+const statusNotesEligible = () => {
+    const st = String(props.rental?.status || '').toLowerCase();
+
+    return (
+        ['draft', 'pending_approval', 'rejected', 'cancelled'].includes(st)
+        || Boolean(props.rental?.rejection_reason?.trim())
+        || Boolean(props.rental?.cancellation_reason?.trim())
+    );
+};
+
+const openStatusNotes = () => {
+    const st = String(props.rental?.status || '').toLowerCase();
+    const lines = [];
+    if (props.container?.current_status) {
+        lines.push(`Equipment status: ${statusLabel(props.container.current_status)}`);
+    }
+    if (st === 'rejected') {
+        lines.push(props.rental?.rejection_reason?.trim() || 'No rejection reason was recorded.');
+    } else if (st === 'cancelled') {
+        lines.push(props.rental?.cancellation_reason?.trim() || 'No cancellation notes were recorded.');
+    } else if (st === 'pending_approval') {
+        lines.push('Awaiting operations review.');
+    } else if (st === 'draft') {
+        lines.push('Draft rental — submit from the request form when ready.');
+    } else if (props.rental?.rejection_reason?.trim()) {
+        lines.push(`Note: ${props.rental.rejection_reason.trim()}`);
+    } else if (props.rental?.cancellation_reason?.trim()) {
+        lines.push(`Note: ${props.rental.cancellation_reason.trim()}`);
+    }
+    statusNotesModal.title = `Rental #${props.rental.id} · status notes`;
+    statusNotesModal.body = lines.join('\n\n');
+    statusNotesModal.show = true;
+};
+
+const closeStatusNotes = () => {
+    statusNotesModal.show = false;
+};
 </script>
 
 <template>
@@ -92,6 +139,15 @@ const statusLabel = (value) =>
                     </p>
                 </div>
             </div>
+            <div v-if="statusNotesEligible()" class="md:self-start">
+                <button
+                    type="button"
+                    class="text-xs font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2 hover:text-blue-900"
+                    @click="openStatusNotes"
+                >
+                    Status notes
+                </button>
+            </div>
         </div>
 
         <div
@@ -110,6 +166,22 @@ const statusLabel = (value) =>
                 </div>
             </dl>
         </div>
+
+        <Modal :show="statusNotesModal.show" max-width="md" @close="closeStatusNotes">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-slate-900">{{ statusNotesModal.title }}</h3>
+                <p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ statusNotesModal.body }}</p>
+                <div class="mt-5 flex justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                        @click="closeStatusNotes"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </section>
 </template>
 

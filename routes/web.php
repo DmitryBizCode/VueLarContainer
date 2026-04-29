@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\MonitorChartsController;
 use App\Http\Controllers\Api\RentalTelemetryToggleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceMonitoringController;
+use App\Http\Controllers\LogisticsMapDataController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RentalController;
 use App\Http\Controllers\RentalsCenterController;
@@ -49,12 +51,21 @@ Route::get('/rentals-center', [RentalsCenterController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('rentals.center');
 
+Route::get('/rentals/map-data', LogisticsMapDataController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('rentals.map-data');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware('verified')->group(function () {
+        Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+            ->name('notifications.read');
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
+            ->name('notifications.read-all');
+
         Route::get('/rentals/request', [RentalController::class, 'create'])->name('rentals.request.create');
         Route::post('/rentals/request/preview', [RentalController::class, 'preview'])->name('rentals.request.preview');
         Route::post('/rentals/request', [RentalController::class, 'store'])->name('rentals.request.store');

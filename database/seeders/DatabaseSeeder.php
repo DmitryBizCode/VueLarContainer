@@ -16,9 +16,11 @@ class DatabaseSeeder extends Seeder
             OwnerSeeder::class,
             PortSeeder::class,
             RouteSeeder::class,
+            VesselSeeder::class,
             ContainerSeeder::class,
             SensorTypeSeeder::class,
             DemoAccountSeeder::class,
+            MaritimeDemoSeeder::class,
         ]);
     }
 }

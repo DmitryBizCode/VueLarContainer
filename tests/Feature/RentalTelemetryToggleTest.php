@@ -110,4 +110,17 @@ class RentalTelemetryToggleTest extends TestCase
 
         $this->assertTrue($rental->fresh()->is_telemetry_active);
     }
+
+    public function test_toggle_forbidden_after_rental_end_date_passed(): void
+    {
+        [$user, $rental] = $this->createActiveIotRental();
+        $rental->end_date = now()->subDay();
+        $rental->status = 'completed';
+        $rental->save();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.rentals.toggle-telemetry', $rental))
+            ->assertForbidden();
+    }
 }

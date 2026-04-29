@@ -1,7 +1,11 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 
-const isActiveByPrefix = (currentUrl, prefix) => currentUrl === prefix || currentUrl.startsWith(`${prefix}/`);
+const normalizeUrl = (url) => String(url || '').split('?')[0].split('#')[0];
+const isActiveByPrefix = (currentUrl, prefix) => {
+    const u = normalizeUrl(currentUrl);
+    return u === prefix || u.startsWith(`${prefix}/`);
+};
 
 const ADMIN_ROLES = ['admin', 'operator', 'ops'];
 

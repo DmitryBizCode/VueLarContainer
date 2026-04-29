@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Route as ShippingRoute;
+use App\Services\ContainerAvailabilityService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -32,6 +32,7 @@ class StoreRentalRequest extends FormRequest
             'package_count' => ['nullable', 'integer', 'min:1'],
             'cargo_value' => ['nullable', 'numeric', 'min:0'],
             'priority' => ['required', Rule::in(['normal', 'urgent', 'express'])],
+            'routing_priority' => ['nullable', 'string', Rule::in(['speed', 'cost'])],
             'incoterm' => ['nullable', Rule::in(['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'DAP', 'DDP'])],
             'loading_type' => ['required', Rule::in(['fcl', 'lcl'])],
             'delivery_mode' => ['required', Rule::in(['port_to_port'])],
@@ -67,25 +68,48 @@ class StoreRentalRequest extends FormRequest
                 return;
             }
 
-            $estimatedDays = null;
-            if ($routeMode === 'route' && $this->input('route_id')) {
-                $route = ShippingRoute::query()->find((int) $this->input('route_id'));
-                $estimatedDays = $route?->estimated_days;
-            } elseif ($routeMode === 'ports' && $this->input('origin_port_id') && $this->input('destination_port_id')) {
-                $route = ShippingRoute::query()
-                    ->where('origin_port_id', (int) $this->input('origin_port_id'))
-                    ->where('destination_port_id', (int) $this->input('destination_port_id'))
-                    ->first();
-                $estimatedDays = $route?->estimated_days;
+            $availability = app(ContainerAvailabilityService::class);
+
+            if ($routeMode === 'ports') {
+                $originId = (int) $this->input('origin_port_id');
+                if ($originId > 0) {
+                    $readyOrigins = $availability->portIdsWithAvailableContainerAtPort();
+                    if (! in_array($originId, $readyOrigins, true)) {
+                        $validator->errors()->add(
+                            'origin_port_id',
+                            'No available container is currently at the selected origin port.'
+                        );
+                    }
+                }
             }
 
-            if ($estimatedDays !== null && $estimatedDays > 0) {
-                $bufferDays = 3;
-                $minEnd = $startDate->copy()->addDays($estimatedDays + $bufferDays);
+            $ctx = $availability->resolveRouteContext([
+                'route_mode' => $routeMode,
+                'route_id' => $this->input('route_id'),
+                'origin_port_id' => $this->input('origin_port_id'),
+                'destination_port_id' => $this->input('destination_port_id'),
+                'priority' => $this->input('priority'),
+                'routing_priority' => $this->input('routing_priority'),
+            ]);
+
+            if (! ($ctx['path_found'] ?? true)) {
+                if ($routeMode === 'ports') {
+                    $validator->errors()->add(
+                        'destination_port_id',
+                        'No open shipping route connects these ports. Try a different pair or contact operations.'
+                    );
+                } else {
+                    $validator->errors()->add('route_id', 'The selected route is not available.');
+                }
+            }
+
+            $spanDays = (int) ($ctx['min_rental_span_days'] ?? 0);
+            if ($spanDays > 0) {
+                $minEnd = $startDate->copy()->addDays($spanDays);
                 if ($endDate->lt($minEnd)) {
                     $validator->errors()->add(
                         'end_date',
-                        'Rental period must be at least '.($estimatedDays + $bufferDays)." days for this route (minimum end date: {$minEnd->format('Y-m-d')})."
+                        "Rental must span at least {$spanDays} day(s) for transit, port handling, and post-arrival buffer (minimum end date: {$minEnd->format('Y-m-d')})."
                     );
                 }
             }

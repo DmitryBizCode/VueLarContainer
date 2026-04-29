@@ -19,6 +19,7 @@ const form = useForm({
     status: props.currentStatus,
     payment_status: props.currentPaymentStatus || '',
     rejection_reason: '',
+    cancellation_reason: '',
 });
 
 watch(
@@ -27,6 +28,7 @@ watch(
         form.status = status ?? '';
         form.payment_status = payment ?? '';
         form.rejection_reason = '';
+        form.cancellation_reason = '';
     }
 );
 
@@ -36,6 +38,10 @@ const openConfirm = () => {
         form.setError('rejection_reason', 'Rejection reason is required when rejecting.');
         return;
     }
+    if (form.status === 'cancelled' && !form.cancellation_reason?.trim()) {
+        form.setError('cancellation_reason', 'Cancellation reason is required when cancelling.');
+        return;
+    }
     showConfirmModal.value = true;
 };
 
@@ -43,6 +49,7 @@ const submit = () => {
     const payload = {
         status: form.status,
         rejection_reason: form.status === 'rejected' ? form.rejection_reason : undefined,
+        cancellation_reason: form.status === 'cancelled' ? form.cancellation_reason : undefined,
     };
     if (!props.hidePaymentStatus && form.payment_status) {
         payload.payment_status = form.payment_status;
@@ -91,6 +98,17 @@ const statusLabel = (s) => String(s).replace(/_/g, ' ');
             />
             <InputError :message="form.errors.rejection_reason" />
         </div>
+        <div v-if="form.status === 'cancelled'">
+            <label class="block text-xs font-semibold text-slate-500">Cancellation reason</label>
+            <textarea
+                v-model="form.cancellation_reason"
+                class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                rows="2"
+                name="cancellation_reason"
+                placeholder="Required when cancelling (for the customer record)"
+            />
+            <InputError :message="form.errors.cancellation_reason" />
+        </div>
         <button
             type="button"
             class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
@@ -111,6 +129,9 @@ const statusLabel = (s) => String(s).replace(/_/g, ' ');
             </p>
             <p v-if="form.status === 'rejected' && form.rejection_reason" class="mt-2 text-sm text-slate-600">
                 Rejection reason: {{ form.rejection_reason }}
+            </p>
+            <p v-if="form.status === 'cancelled' && form.cancellation_reason" class="mt-2 text-sm text-slate-600">
+                Cancellation reason: {{ form.cancellation_reason }}
             </p>
             <div class="mt-4 flex justify-end gap-2">
                 <button

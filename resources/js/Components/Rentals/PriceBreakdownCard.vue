@@ -18,6 +18,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /** Port list from rental request page (id + label) for leg labels. */
+    ports: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const formatMoney = (value) =>
@@ -26,6 +31,36 @@ const formatMoney = (value) =>
         currency: 'USD',
         maximumFractionDigits: 2,
     }).format(Number(value || 0));
+
+const isMultiHopRouting = computed(() => {
+    const ctx = props.routeContext || {};
+    if (Array.isArray(ctx.route_legs) && ctx.route_legs.length > 1) {
+        return true;
+    }
+    return Boolean(ctx.multi_hop);
+});
+
+const portLabel = (id) => {
+    if (id == null) {
+        return '—';
+    }
+    const p = (props.ports || []).find((x) => String(x.id) === String(id));
+    if (p) {
+        return p.label || p.name || `#${p.id}`;
+    }
+    return `#${id}`;
+};
+
+const routingLegRows = computed(() => {
+    const legs = Array.isArray(props.routeContext?.route_legs) ? props.routeContext.route_legs : [];
+    return legs.map((leg, i) => ({
+        key: `${i}-${leg.route_id || ''}`,
+        from: portLabel(leg.origin_port_id),
+        to: portLabel(leg.destination_port_id),
+        days: leg.estimated_days,
+        km: leg.distance,
+    }));
+});
 
 const rows = computed(() => {
     if (!props.priceBreakdown) return [];
@@ -70,6 +105,27 @@ const rows = computed(() => {
             <span v-else class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                 Distance {{ Number(routeContext.distance || 0).toFixed(0) }} km
             </span>
+        </div>
+
+        <div
+            v-if="routingLegRows.length"
+            class="mb-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3"
+        >
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Routing{{ isMultiHopRouting ? ' (multi-segment)' : '' }}
+            </p>
+            <ul class="mt-2 space-y-1.5 text-xs text-slate-700">
+                <li
+                    v-for="(row, idx) in routingLegRows"
+                    :key="row.key"
+                    class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 pb-1.5 last:border-0 last:pb-0"
+                >
+                    <span class="font-medium text-slate-800"
+                        >Leg {{ idx + 1 }}: {{ row.from }} <span class="text-slate-500">-></span> {{ row.to }}</span
+                    >
+                    <span class="shrink-0 text-slate-600">{{ row.days }} d · {{ Number(row.km || 0).toFixed(0) }} km</span>
+                </li>
+            </ul>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
