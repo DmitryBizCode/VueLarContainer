@@ -71,4 +71,38 @@ class VesselPortScheduleService
             ->orderBy('id')
             ->first();
     }
+
+    /**
+     * Compute the earliest time a vessel can be assigned at this port.
+     * Returns null when no operational vessel exists at the port at all.
+     */
+    public function nextAssignableTimeAtPort(int $originPortId, CarbonImmutable $readyFrom): ?CarbonImmutable
+    {
+        $operational = config('logistics.vessel_operational_statuses', ['active', 'in_transit', 'in_port', 'scheduled']);
+
+        $vessels = Vessel::query()
+            ->where('current_port_id', $originPortId)
+            ->whereIn('status', $operational)
+            ->get(['id', 'berth_busy_until', 'out_of_service_until']);
+
+        if ($vessels->isEmpty()) {
+            return null;
+        }
+
+        $best = null;
+        foreach ($vessels as $vessel) {
+            $t = $readyFrom;
+            if ($vessel->out_of_service_until !== null && $vessel->out_of_service_until->gt($t)) {
+                $t = CarbonImmutable::instance($vessel->out_of_service_until);
+            }
+            if ($vessel->berth_busy_until !== null && $vessel->berth_busy_until->gt($t)) {
+                $t = CarbonImmutable::instance($vessel->berth_busy_until);
+            }
+            if ($best === null || $t->lt($best)) {
+                $best = $t;
+            }
+        }
+
+        return $best;
+    }
 }

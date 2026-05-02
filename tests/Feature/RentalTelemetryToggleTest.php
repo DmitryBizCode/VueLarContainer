@@ -87,7 +87,7 @@ class RentalTelemetryToggleTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
 
         $this->postJson(route('api.rentals.toggle-telemetry', $rental))
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_owner_can_toggle_telemetry_twice(): void

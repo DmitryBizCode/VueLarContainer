@@ -40,7 +40,7 @@ class AdminRentalController extends Controller
             $query->where('payment_status', $validated['payment_status']);
         }
         if (! empty($validated['q'])) {
-            $search = '%'.addslashes($validated['q']).'%';
+            $search = '%'.$validated['q'].'%';
             $query->where(function ($q) use ($search) {
                 $q->where('id', 'like', $search)
                     ->orWhereHas('user', fn ($u) => $u->where('email', 'like', $search)->orWhere('first_name', 'like', $search)->orWhere('last_name', 'like', $search))

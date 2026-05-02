@@ -113,6 +113,47 @@ class RentalsCenterOverviewTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_default_list_hides_pending_rentals_scope_all_shows_them(): void
+    {
+        Carbon::setTestNow('2026-04-15 12:00:00');
+
+        $b = $this->baseUserWithContainer();
+
+        $pending = Rental::query()->create([
+            'user_id' => $b['user']->id,
+            'container_id' => $b['container']->id,
+            'route_id' => null,
+            'origin_port_id' => $b['port']->id,
+            'destination_port_id' => $b['port']->id,
+            'start_date' => Carbon::parse('2026-04-20 10:00:00'),
+            'end_date' => Carbon::parse('2026-04-28 10:00:00'),
+            'rental_days' => 7,
+            'cargo_types' => ['general'],
+            'status' => 'pending_approval',
+            'payment_status' => 'unpaid',
+            'price' => 100,
+        ]);
+
+        $this->actingAs($b['user'])
+            ->get(route('rentals.center'))
+            ->assertInertia(
+                fn (Assert $page) => $page
+                    ->where('filters.scope', 'successful')
+                    ->where('rentals.total', 0)
+            );
+
+        $this->actingAs($b['user'])
+            ->get(route('rentals.center', ['scope' => 'all']))
+            ->assertInertia(
+                fn (Assert $page) => $page
+                    ->where('filters.scope', 'all')
+                    ->where('rentals.total', 1)
+                    ->where('rentals.data.0.id', $pending->id)
+            );
+
+        Carbon::setTestNow();
+    }
+
     public function test_overdue_excludes_cancelled_rejected_approval_payments_and_ended_rentals(): void
     {
         Carbon::setTestNow('2026-04-20 10:00:00');

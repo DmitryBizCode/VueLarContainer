@@ -88,7 +88,7 @@ class TelemetryApiTest extends TestCase
         Sanctum::actingAs($other);
 
         $this->getJson("/api/rentals/{$rental->id}/telemetry")
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_telemetry_falls_back_to_simulation_snapshot_when_metrics_empty(): void

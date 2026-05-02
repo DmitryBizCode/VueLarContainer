@@ -116,11 +116,16 @@ class Rental extends Model
 
     public function canAccessIotMonitor(): bool
     {
-        if ($this->end_date !== null && $this->end_date->isPast()) {
+        if (! in_array((string) $this->status, self::IOT_MONITOR_ACCESS_STATUSES, true)) {
             return false;
         }
 
-        return in_array((string) $this->status, self::IOT_MONITOR_ACCESS_STATUSES, true);
+        // Completed rentals retain read-only history access after end_date.
+        if ((string) $this->status === 'completed') {
+            return true;
+        }
+
+        return $this->end_date === null || ! $this->end_date->isPast();
     }
 
     public function user(): BelongsTo

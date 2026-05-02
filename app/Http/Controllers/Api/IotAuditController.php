@@ -48,9 +48,8 @@ class IotAuditController extends Controller
         $user = $request->user();
         abort_if($user === null, 401);
 
-        $isOps = in_array((string) ($user->role ?? ''), ['admin', 'operator', 'ops'], true);
-        if (! $isOps && (int) $rental->user_id !== (int) $user->id) {
-            abort(403);
+        if ((int) $rental->user_id !== (int) $user->id) {
+            abort(404);
         }
     }
 }

@@ -16,7 +16,13 @@ final class LogisticsMapGeometryService
     private const GC_SEGMENT_FLOOR = 8;
 
     /**
-     * @param  list<array{0: float, 1: float}|array{lat: float, lng: float}>|null  $seaPath
+     * IMPORTANT: for maritime logistics we only draw routes that have explicit sea-path geometry stored.
+     * This avoids misleading polylines that can cross land when using great-circle fallbacks.
+     */
+    private const REQUIRE_STORED_GEOMETRY_FOR_RENDER = true;
+
+    /**
+     * @param  list<array{0: float, 1: float}|array{lat: float, lng: float}>|array{lat: float, lng: float}|null  $seaPath
      * @return list<array{0: float, 1: float}>
      */
     public static function resolvePath(
@@ -34,6 +40,54 @@ final class LogisticsMapGeometryService
         $segments = self::greatCircleSegmentCount($originLat, $originLng, $destLat, $destLng);
 
         return self::greatCirclePolyline($originLat, $originLng, $destLat, $destLng, $segments);
+    }
+
+    /**
+     * Returns a resolved polyline only when it is safe to draw:
+     * - has stored sea_path geometry (≥1 waypoint), OR
+     * - the great-circle hop is short enough that cutting a tiny corner is acceptable.
+     *
+     * Longer legs with no geometry return null so callers can skip rendering instead of drawing fake land-crossing lines.
+     *
+     * @param  list<array{0: float, 1: float}|array{lat: float, lng: float}>|array{lat: float, lng: float}|null  $seaPath
+     * @return list<array{0: float, 1: float}>|null
+     */
+    public static function resolvePathIfNavigable(
+        float $originLat,
+        float $originLng,
+        float $destLat,
+        float $destLng,
+        ?array $seaPath
+    ): ?array {
+        $merged = self::mergeSeaPathWithEndpoints($originLat, $originLng, $destLat, $destLng, $seaPath);
+        if (count($merged) >= 3) {
+            return $merged;
+        }
+
+        if (! self::REQUIRE_STORED_GEOMETRY_FOR_RENDER) {
+            $segments = self::greatCircleSegmentCount($originLat, $originLng, $destLat, $destLng);
+
+            return self::greatCirclePolyline($originLat, $originLng, $destLat, $destLng, $segments);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<array{0: float, 1: float}|array{lat: float, lng: float}>|array{lat: float, lng: float}|null  $seaPath
+     */
+    public static function hasStoredGeometry(?array $seaPath): bool
+    {
+        if (! is_array($seaPath) || $seaPath === []) {
+            return false;
+        }
+        foreach ($seaPath as $row) {
+            if (is_array($row)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -247,12 +301,65 @@ final class LogisticsMapGeometryService
         return ['lat' => rad2deg($φ), 'lng' => rad2deg($λ)];
     }
 
+    /**
+     * Compass bearing (0–359°, clockwise from North) at progress t along the path.
+     *
+     * @param  list<array{0: float, 1: float}>  $path
+     */
+    public static function bearingAlongPath(array $path, float $t): float
+    {
+        $t = min(1.0, max(0.0, $t));
+        $n = count($path);
+        if ($n < 2) {
+            return 0.0;
+        }
+
+        $lengths = [];
+        $total = 0.0;
+        for ($i = 0; $i < $n - 1; $i++) {
+            $len = self::haversineKm($path[$i][0], $path[$i][1], $path[$i + 1][0], $path[$i + 1][1]);
+            $lengths[] = $len;
+            $total += $len;
+        }
+
+        if ($total <= 1e-9) {
+            return self::initialBearing($path[0][0], $path[0][1], $path[$n - 1][0], $path[$n - 1][1]);
+        }
+
+        $target = $t * $total;
+        $acc = 0.0;
+        for ($i = 0; $i < $n - 1; $i++) {
+            $len = $lengths[$i];
+            if ($len <= 1e-9) {
+                continue;
+            }
+            if ($acc + $len >= $target) {
+                return self::initialBearing($path[$i][0], $path[$i][1], $path[$i + 1][0], $path[$i + 1][1]);
+            }
+            $acc += $len;
+        }
+
+        return self::initialBearing($path[$n - 2][0], $path[$n - 2][1], $path[$n - 1][0], $path[$n - 1][1]);
+    }
+
     private static function greatCircleSegmentCount(float $lat1, float $lng1, float $lat2, float $lng2): int
     {
         $km = self::haversineKm($lat1, $lng1, $lat2, $lng2);
         $byDistance = (int) round($km / 250.0);
 
         return max(self::GC_SEGMENT_FLOOR, min(self::GC_SEGMENT_CAP, $byDistance));
+    }
+
+    private static function initialBearing(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $φ1 = deg2rad($lat1);
+        $φ2 = deg2rad($lat2);
+        $Δλ = deg2rad($lng2 - $lng1);
+
+        $y = sin($Δλ) * cos($φ2);
+        $x = cos($φ1) * sin($φ2) - sin($φ1) * cos($φ2) * cos($Δλ);
+
+        return fmod(rad2deg(atan2($y, $x)) + 360.0, 360.0);
     }
 
     /**

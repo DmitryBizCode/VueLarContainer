@@ -35,7 +35,7 @@ class StoreRentalRequest extends FormRequest
             'routing_priority' => ['nullable', 'string', Rule::in(['speed', 'cost'])],
             'incoterm' => ['nullable', Rule::in(['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'DAP', 'DDP'])],
             'loading_type' => ['required', Rule::in(['fcl', 'lcl'])],
-            'delivery_mode' => ['required', Rule::in(['port_to_port'])],
+            'delivery_mode' => ['required', Rule::in(['port_to_port', 'door_to_port', 'port_to_door', 'door_to_door'])],
             'sustainability_pref' => ['required', Rule::in(['standard', 'eco_optimized', 'low_emission'])],
             'insurance_required' => ['required', 'boolean'],
             'requires_customs_clearance' => ['required', 'boolean'],

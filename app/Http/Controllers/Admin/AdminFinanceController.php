@@ -102,15 +102,20 @@ class AdminFinanceController extends Controller
                 ->all();
         });
 
-        $rejectedApproval = Cache::remember('admin_finance:rejected_approval:v1', now()->addMinutes(5), function () use ($rentalsByPaymentStatus) {
+        $rejectedApproval = Cache::remember('admin_finance:rejected_approval:v1', now()->addMinutes(5), function () {
+            $row = DB::table('rentals')
+                ->selectRaw("COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum")
+                ->whereRaw("LOWER(COALESCE(payment_status, '')) = 'rejected_by_approval'")
+                ->first();
+
             $txAmount = (float) DB::table('transactions')
                 ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
                 ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
                 ->sum('transactions.amount');
 
             return [
-                'count' => (int) ($rentalsByPaymentStatus['rejected_by_approval']['count'] ?? 0),
-                'lostRevenuePriceSum' => (float) ($rentalsByPaymentStatus['rejected_by_approval']['price_sum'] ?? 0),
+                'count' => (int) ($row?->count ?? 0),
+                'lostRevenuePriceSum' => (float) ($row?->price_sum ?? 0),
                 'txAmountSum' => $txAmount,
             ];
         });

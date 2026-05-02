@@ -115,3 +115,10 @@ html {
 select {
     padding-right: 2rem !important;
 }
+
+/* Keep Leaflet panes below sticky headers inside our map cards. */
+.logistics-map-wrapper .leaflet-pane,
+.logistics-map-wrapper .leaflet-top,
+.logistics-map-wrapper .leaflet-bottom {
+    z-index: 10;
+}

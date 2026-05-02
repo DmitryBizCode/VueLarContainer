@@ -128,6 +128,8 @@ const previewState = reactive({
     loading: false,
     availableContainers: [],
     routeContext: {},
+    assignedVessel: null,
+    routePlan: null,
     estimatedPrice: 0,
     priceBreakdown: null,
     previewError: '',
@@ -313,6 +315,8 @@ const runPreview = async () => {
         const data = response.data || {};
 
         previewState.routeContext = data.route_context || {};
+        previewState.assignedVessel = data.assigned_vessel || null;
+        previewState.routePlan = data.route_plan || null;
         previewState.availableContainers = data.available_containers || [];
         previewState.estimatedPrice = Number(data.estimated_price || 0);
         previewState.priceBreakdown = data.price_breakdown || null;
@@ -339,6 +343,8 @@ const runPreview = async () => {
             fromErrors ||
             'Could not calculate preview for current inputs.';
         previewState.routeContext = {};
+        previewState.assignedVessel = null;
+        previewState.routePlan = null;
         previewState.availableContainers = [];
         previewState.estimatedPrice = 0;
         previewState.priceBreakdown = null;
@@ -862,6 +868,9 @@ const submit = () => {
                             :route-context="previewState.routeContext"
                             :price-breakdown="previewState.priceBreakdown"
                             :loading="previewState.loading"
+                            :start-date="form.start_date"
+                            :assigned-vessel="previewState.assignedVessel"
+                            :route-plan="previewState.routePlan"
                         />
 
                         <section v-show="currentStep === 4" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

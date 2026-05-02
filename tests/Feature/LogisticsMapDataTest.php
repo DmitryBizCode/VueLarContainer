@@ -75,12 +75,15 @@ class LogisticsMapDataTest extends TestCase
             'longitude' => 40.0,
         ]);
 
+        // sea_path required: routes without stored geometry are no longer drawn on the map —
+        // the controller skips them instead of falling back to a land-crossing great-circle line.
         $route = ShippingRoute::query()->create([
             'origin_port_id' => $origin->id,
             'destination_port_id' => $destination->id,
             'estimated_days' => 5,
             'distance' => 500.0,
             'route_status' => 'open',
+            'sea_path' => [[15.0, 25.0], [25.0, 35.0]],
         ]);
 
         $container = Container::query()->create([
@@ -154,24 +157,15 @@ class LogisticsMapDataTest extends TestCase
         $edges = $response->json('route_edges');
         $this->assertNotEmpty($edges);
         $this->assertEquals($route->id, $edges[0]['id']);
-        $expectedPath = LogisticsMapGeometryService::resolvePath(10.0, 20.0, 30.0, 40.0, null);
+        $expectedPath = LogisticsMapGeometryService::resolvePath(10.0, 20.0, 30.0, 40.0, [[15.0, 25.0], [25.0, 35.0]]);
         $this->assertEquals(
             array_map(static fn (array $p) => [(float) $p[0], (float) $p[1]], $expectedPath),
             array_map(static fn ($p) => [(float) $p[0], (float) $p[1]], $edges[0]['path'])
         );
 
+        // Non-ops users only see vessels linked to their own rentals; $user has no rentals so fleet is empty.
         $fleet = $response->json('vessel_positions');
-        $this->assertCount(1, $fleet);
-        $this->assertSame($shipment->id, $fleet[0]['shipment_id']);
-        $this->assertFalse($fleet[0]['is_user_shipment']);
-        $this->assertTrue($fleet[0]['has_rental_cargo']);
-        $this->assertSame(1, $fleet[0]['rental_cargo_count']);
-        $this->assertSame('in_transit', $fleet[0]['shipment_status']);
-        $this->assertSame('Map Origin Port', $fleet[0]['origin_name']);
-        $this->assertSame('Map Dest Port', $fleet[0]['destination_name']);
-        $expectedPos = LogisticsMapGeometryService::interpolateAlongPath($expectedPath, 0.5);
-        $this->assertEqualsWithDelta($expectedPos['lat'], $fleet[0]['latitude'], 0.0001);
-        $this->assertEqualsWithDelta($expectedPos['lng'], $fleet[0]['longitude'], 0.0001);
+        $this->assertEmpty($fleet);
     }
 
     public function test_route_edges_use_stored_sea_path_when_present(): void
@@ -440,9 +434,10 @@ class LogisticsMapDataTest extends TestCase
         $response = $this->actingAs($user)->getJson(route('rentals.map-data'));
         $response->assertOk();
 
+        // Non-ops users only see vessels linked to their own active-window rentals.
+        // The user's rental has a past end_date so it is excluded from the map window — no vessels returned.
         $fleet = $response->json('vessel_positions');
-        $this->assertNotEmpty($fleet);
-        $this->assertFalse((bool) ($fleet[0]['is_user_shipment'] ?? true));
+        $this->assertEmpty($fleet);
     }
 
     public function test_container_marker_snaps_to_destination_after_port_operations_complete(): void
@@ -1043,7 +1038,7 @@ class LogisticsMapDataTest extends TestCase
         $this->assertEqualsWithDelta((float) $fleet['longitude'], (float) $pos['longitude'], 0.0001);
     }
 
-    public function test_idle_vessel_appears_at_current_port_without_shipment(): void
+    public function test_idle_vessel_is_not_returned_on_user_only_map_endpoint_even_for_admin_role(): void
     {
         $countryId = DB::table('countries')->insertGetId([
             'name' => 'MaplandIdle',
@@ -1071,20 +1066,17 @@ class LogisticsMapDataTest extends TestCase
             'last_inspection_date' => now()->subMonth()->toDateString(),
         ]);
 
-        $user = User::factory()->create(['country_id' => $countryId]);
+        // Regular users do NOT see idle vessels — only vessels tied to their own active shipments.
+        $regularUser = User::factory()->create(['country_id' => $countryId]);
+        $regularResponse = $this->actingAs($regularUser)->getJson(route('rentals.map-data'));
+        $regularResponse->assertOk();
+        $this->assertEmpty($regularResponse->json('vessel_positions'));
 
-        $response = $this->actingAs($user)->getJson(route('rentals.map-data'));
-
-        $response->assertOk();
-        $fleet = $response->json('vessel_positions');
-        $this->assertCount(1, $fleet);
-        $this->assertNull($fleet[0]['shipment_id']);
-        $this->assertSame('Idle Vessel', $fleet[0]['vessel_name']);
-        $this->assertFalse($fleet[0]['has_rental_cargo']);
-        $this->assertSame(0, $fleet[0]['rental_cargo_count']);
-        $this->assertSame('at_port', $fleet[0]['shipment_status']);
-        $this->assertEqualsWithDelta(55.0, $fleet[0]['latitude'], 0.0001);
-        $this->assertEqualsWithDelta(12.0, $fleet[0]['longitude'], 0.0001);
+        // Even admin role is user-only on non-admin routes.
+        $opsUser = User::factory()->create(['country_id' => $countryId, 'role' => 'admin']);
+        $opsResponse = $this->actingAs($opsUser)->getJson(route('rentals.map-data'));
+        $opsResponse->assertOk();
+        $this->assertEmpty($opsResponse->json('vessel_positions'));
     }
 
     public function test_scheduled_shipment_is_included_at_route_origin(): void
@@ -1166,8 +1158,10 @@ class LogisticsMapDataTest extends TestCase
             'status' => 'scheduled',
         ]);
 
+        // The requesting user must own the rental for the vessel to appear.
+        $user = User::factory()->create(['country_id' => $countryId]);
         $rental = Rental::query()->create([
-            'user_id' => User::factory()->create(['country_id' => $countryId])->id,
+            'user_id' => $user->id,
             'container_id' => $container->id,
             'route_id' => $route->id,
             'origin_port_id' => $origin->id,
@@ -1188,8 +1182,6 @@ class LogisticsMapDataTest extends TestCase
             'condition_on_arrival' => 'good',
             'notes' => null,
         ]);
-
-        $user = User::factory()->create(['country_id' => $countryId]);
 
         $response = $this->actingAs($user)->getJson(route('rentals.map-data'));
 
@@ -1214,6 +1206,12 @@ class LogisticsMapDataTest extends TestCase
             'interest_tax' => 0,
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        $owner = Owner::query()->create([
+            'name' => 'Dedup Owner',
+            'email' => 'dedup-owner-'.uniqid().'@test.local',
+            'phone_number' => '+1000000040',
         ]);
 
         $origin = Port::query()->create([
@@ -1248,7 +1246,26 @@ class LogisticsMapDataTest extends TestCase
             'last_inspection_date' => now()->subMonth()->toDateString(),
         ]);
 
-        Shipment::query()->create([
+        $mkContainer = static function () use ($owner, $origin): Container {
+            return Container::query()->create([
+                'serial_number' => 'DD-'.str_replace('.', '', uniqid('', true)),
+                'type' => 'standard',
+                'width' => 2.44,
+                'length' => 6.06,
+                'height' => 2.59,
+                'max_weight' => 28200,
+                'manufacture_date' => now()->subYear(),
+                'photo' => null,
+                'iot_active' => false,
+                'current_status' => 'available',
+                'owner_id' => $owner->id,
+                'current_port_id' => $origin->id,
+            ]);
+        };
+
+        $user = User::factory()->create(['country_id' => $countryId]);
+
+        $scheduledShip = Shipment::query()->create([
             'vessel_id' => $vessel->id,
             'route_id' => $route->id,
             'leg_sequence' => 1,
@@ -1275,7 +1292,31 @@ class LogisticsMapDataTest extends TestCase
             'status' => 'in_transit',
         ]);
 
-        $user = User::factory()->create(['country_id' => $countryId]);
+        // Link user rentals to both shipments so they appear in the fleet query.
+        foreach ([$scheduledShip, $active] as $ship) {
+            $c = $mkContainer();
+            $r = Rental::query()->create([
+                'user_id' => $user->id,
+                'container_id' => $c->id,
+                'route_id' => $route->id,
+                'origin_port_id' => $origin->id,
+                'destination_port_id' => $destination->id,
+                'start_date' => now()->subDay(),
+                'end_date' => now()->addWeeks(3),
+                'status' => 'in_progress',
+                'payment_status' => 'paid',
+                'terms_accepted' => true,
+                'price' => 10.00,
+            ]);
+            ShipmentItem::query()->create([
+                'shipment_id' => $ship->id,
+                'container_id' => $c->id,
+                'rental_id' => $r->id,
+                'loaded_at' => now(),
+                'condition_on_arrival' => 'good',
+                'notes' => null,
+            ]);
+        }
 
         $response = $this->actingAs($user)->getJson(route('rentals.map-data'));
 
@@ -1488,12 +1529,19 @@ class LogisticsMapDataTest extends TestCase
             'last_inspection_date' => now()->subMonth()->toDateString(),
         ]);
 
+        // Regular users: idle vessels are never shown regardless of whitelist config.
         $user = User::factory()->create(['country_id' => $countryId]);
         $response = $this->actingAs($user)->getJson(route('rentals.map-data'));
-
         $response->assertOk();
         $names = collect($response->json('vessel_positions'))->pluck('vessel_name')->all();
-        $this->assertContains('Off Whitelist Vessel', $names);
+        $this->assertNotContains('Off Whitelist Vessel', $names);
+
+        // User-only: admin role does not broaden visibility on this endpoint.
+        $opsUser = User::factory()->create(['country_id' => $countryId, 'role' => 'admin']);
+        $opsResponse = $this->actingAs($opsUser)->getJson(route('rentals.map-data'));
+        $opsResponse->assertOk();
+        $opsNames = collect($opsResponse->json('vessel_positions'))->pluck('vessel_name')->all();
+        $this->assertNotContains('Off Whitelist Vessel', $opsNames);
 
         $portNames = collect($response->json('ports'))->pluck('name')->all();
         $this->assertContains('Port of Rotterdam', $portNames);

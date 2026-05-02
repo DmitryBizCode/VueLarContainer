@@ -141,4 +141,48 @@ class IotMonitorAccessTest extends TestCase
             ->getJson(route('rentals.monitor.charts-data', $rental))
             ->assertForbidden();
     }
+
+    // --- completed rental with PAST end_date (realistic scenario) ---
+
+    /**
+     * @return array{user: User, rental: Rental}
+     */
+    private function createCompletedRentalWithPastEndDateForUser(): array
+    {
+        $data = $this->createPendingRentalForUser();
+        $data['rental']->update([
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'end_date' => now()->subDay(),
+        ]);
+
+        return ['user' => $data['user'], 'rental' => $data['rental']->fresh()];
+    }
+
+    public function test_monitor_page_ok_when_rental_completed_and_end_date_past(): void
+    {
+        ['user' => $user, 'rental' => $rental] = $this->createCompletedRentalWithPastEndDateForUser();
+
+        $this->actingAs($user)
+            ->get(route('rentals.monitor', $rental))
+            ->assertOk();
+    }
+
+    public function test_monitor_charts_api_ok_when_rental_completed_and_end_date_past(): void
+    {
+        ['user' => $user, 'rental' => $rental] = $this->createCompletedRentalWithPastEndDateForUser();
+        Sanctum::actingAs($user);
+
+        $this->getJson("/api/rentals/{$rental->id}/monitor-charts")
+            ->assertOk();
+    }
+
+    public function test_telemetry_toggle_forbidden_when_rental_completed_and_end_date_past(): void
+    {
+        ['user' => $user, 'rental' => $rental] = $this->createCompletedRentalWithPastEndDateForUser();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.rentals.toggle-telemetry', $rental))
+            ->assertForbidden();
+    }
 }

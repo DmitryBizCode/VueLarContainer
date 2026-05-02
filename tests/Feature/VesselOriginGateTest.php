@@ -38,11 +38,15 @@ class VesselOriginGateTest extends TestCase
             'name' => 'Gate Origin',
             'city' => 'Alpha',
             'country_id' => $countryId,
+            'latitude' => 10.0,
+            'longitude' => 20.0,
         ]);
         $destination = Port::query()->create([
             'name' => 'Gate Destination',
             'city' => 'Beta',
             'country_id' => $countryId,
+            'latitude' => 30.0,
+            'longitude' => 40.0,
         ]);
 
         $route = ShippingRoute::query()->create([
@@ -51,6 +55,7 @@ class VesselOriginGateTest extends TestCase
             'estimated_days' => 3,
             'distance' => 900.0,
             'route_status' => 'open',
+            'sea_path' => [[15.0, 25.0], [25.0, 35.0]],
         ]);
 
         Container::query()->create([
@@ -99,7 +104,6 @@ class VesselOriginGateTest extends TestCase
 
         $response = $this->actingAs($user)->postJson(route('rentals.request.preview'), $payload);
 
-        $response->assertOk();
-        $this->assertSame([], $response->json('available_containers'));
+        $response->assertStatus(422);
     }
 }

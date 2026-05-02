@@ -17,7 +17,10 @@ use App\Services\ContainerAvailabilityService;
 use App\Services\IotAuditChainService;
 use App\Services\MonitorChartsService;
 use App\Services\RentalPricingService;
+use App\Services\RentalRouteFeasibilityService;
 use App\Services\TelemetryAnalyticsService;
+use App\Services\VesselPortScheduleService;
+use App\Services\RouteValidationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +37,10 @@ class RentalController extends Controller
         private readonly ContainerAvailabilityService $availabilityService,
         private readonly RentalPricingService $pricingService,
         private readonly TelemetryAnalyticsService $telemetryAnalytics,
-        private readonly MonitorChartsService $monitorCharts
+        private readonly MonitorChartsService $monitorCharts,
+        private readonly VesselPortScheduleService $vesselSchedule,
+        private readonly RouteValidationService $routeValidation,
+        private readonly RentalRouteFeasibilityService $feasibility
     ) {}
 
     public function index(): RedirectResponse
@@ -70,15 +76,8 @@ class RentalController extends Controller
             ? collect()
             : $ports->whereIn('id', $readyOriginPortIds)->values();
 
-        $isOpsUser = in_array((string) ($request->user()->role ?? ''), ['admin', 'operator', 'ops'], true);
-        $pendingApprovals = $isOpsUser
-            ? Rental::query()
-                ->with(['user', 'container', 'originPort.country', 'destinationPort.country'])
-                ->where('status', 'pending_approval')
-                ->latest()
-                ->limit(10)
-                ->get()
-            : collect([]);
+        // User-only on non-admin pages: do not show other users' pending approvals.
+        $pendingApprovals = collect([]);
 
         $myRecentRequests = Rental::query()
             ->with(['container', 'originPort.country', 'destinationPort.country'])
@@ -236,12 +235,44 @@ class RentalController extends Controller
             ], 422);
         }
 
+        // Ensure every leg is drawable (has sea_path geometry). Prevent rentals that cannot be shown on the map.
+        $legIds = collect($routeContext['route_legs'] ?? [])
+            ->pluck('route_id')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->values()
+            ->all();
+        if ($legIds !== []) {
+            $legs = ShippingRoute::query()->whereIn('id', $legIds)->get();
+            $invalid = $legs->first(fn (ShippingRoute $r) => ! $this->routeValidation->isDrawable($r));
+            if ($invalid) {
+                return response()->json([
+                    'message' => 'Selected routing includes a leg without configured sea geometry. Please choose another route or contact operations.',
+                ], 422);
+            }
+        }
+
+        $routeLegs = is_array($routeContext['route_legs'] ?? null) ? $routeContext['route_legs'] : [];
+        $plan = $this->feasibility->buildPlan($routeLegs, $startDate, $validated['routing_priority'] ?? null);
+        if (! ($plan['can_create_rental'] ?? true)) {
+            $message = ($plan['warnings'][0] ?? null) ?: 'Selected routing cannot be fulfilled with current vessel availability.';
+
+            return response()->json([
+                'message' => $message,
+                'route_plan' => $plan,
+            ], 422);
+        }
+
+        // Override min span with feasibility (includes waiting/handling).
+        $routeContext['min_rental_span_days'] = (int) ($plan['minimum_rental_days'] ?? ($routeContext['min_rental_span_days'] ?? 0));
+
         $spanDays = (int) ($routeContext['min_rental_span_days'] ?? 0);
         if ($spanDays > 0) {
             $minEnd = $startDate->addDays($spanDays);
             if ($endDate->lt($minEnd)) {
                 return response()->json([
                     'message' => 'Rental period must cover transit, port handling, and post-arrival buffer (minimum '.$spanDays.' days from start for this routing).',
+                    'route_plan' => $plan,
                 ], 422);
             }
         }
@@ -296,8 +327,52 @@ class RentalController extends Controller
             $estimatedPrice = (float) $priceBreakdown['estimated_total'];
         }
 
+        // Enrich route legs with port names + pre-assign a vessel preview at the first-leg origin,
+        // so the UI can surface transshipment details and the barge/vessel that will likely handle the first leg.
+        $legsEnriched = [];
+        $legPortIds = [];
+        foreach (($routeContext['route_legs'] ?? []) as $leg) {
+            if (! empty($leg['origin_port_id'])) {
+                $legPortIds[(int) $leg['origin_port_id']] = true;
+            }
+            if (! empty($leg['destination_port_id'])) {
+                $legPortIds[(int) $leg['destination_port_id']] = true;
+            }
+        }
+        $portNameById = $legPortIds === []
+            ? []
+            : Port::query()->whereIn('id', array_keys($legPortIds))->pluck('name', 'id')->all();
+        foreach (($routeContext['route_legs'] ?? []) as $leg) {
+            $oid = isset($leg['origin_port_id']) ? (int) $leg['origin_port_id'] : null;
+            $did = isset($leg['destination_port_id']) ? (int) $leg['destination_port_id'] : null;
+            $legsEnriched[] = [
+                'route_id' => isset($leg['route_id']) ? (int) $leg['route_id'] : null,
+                'origin_port_id' => $oid,
+                'destination_port_id' => $did,
+                'origin_name' => $oid !== null ? ($portNameById[$oid] ?? null) : null,
+                'destination_name' => $did !== null ? ($portNameById[$did] ?? null) : null,
+                'estimated_days' => isset($leg['estimated_days']) ? (int) $leg['estimated_days'] : null,
+                'distance' => isset($leg['distance']) ? (float) $leg['distance'] : null,
+            ];
+        }
+
+        $assignedVessel = null;
+        $firstSegVessel = $plan['segments'][0]['vessel'] ?? null;
+        if (is_array($firstSegVessel) && isset($firstSegVessel['id'])) {
+            $assignedVessel = $firstSegVessel + ['current_port_id' => $routeContext['origin_port_id'] ?? null];
+        }
+
+        $routeContextOut = $routeContext + ['route_legs_named' => $legsEnriched];
+        $routeContextOut['is_direct'] = count($legsEnriched) <= 1;
+        $routeContextOut['transfer_ports'] = array_values(array_filter(array_map(
+            static fn (array $leg) => $leg['destination_name'] ?? null,
+            array_slice($legsEnriched, 0, max(0, count($legsEnriched) - 1))
+        )));
+
         return response()->json([
-            'route_context' => $routeContext,
+            'route_context' => $routeContextOut,
+            'route_plan' => $plan,
+            'assigned_vessel' => $assignedVessel,
             'available_containers' => $availableContainers->map(fn (Container $container) => [
                 'id' => $container->id,
                 'serial_number' => $container->serial_number,
@@ -326,6 +401,24 @@ class RentalController extends Controller
             return back()->withErrors([
                 'route_mode' => 'No open shipping route is available for the selected ports.',
             ]);
+        }
+
+        $routeLegs = is_array($routeContext['route_legs'] ?? null) ? $routeContext['route_legs'] : [];
+        $plan = $this->feasibility->buildPlan($routeLegs, $startDate, $validated['routing_priority'] ?? null);
+        if (! ($plan['can_create_rental'] ?? true)) {
+            return back()->withErrors([
+                'route_mode' => ($plan['warnings'][0] ?? null) ?: 'Selected routing cannot be fulfilled with current vessel availability.',
+            ]);
+        }
+
+        $spanDays = (int) ($plan['minimum_rental_days'] ?? ($routeContext['min_rental_span_days'] ?? 0));
+        if ($spanDays > 0) {
+            $minEnd = $startDate->addDays($spanDays);
+            if ($endDate->lt($minEnd)) {
+                return back()->withErrors([
+                    'end_date' => "Rental must span at least {$spanDays} day(s) for this routing (minimum end date: {$minEnd->format('Y-m-d')}).",
+                ]);
+            }
         }
 
         $selectedContainerId = (int) $validated['container_id'];
@@ -373,6 +466,30 @@ class RentalController extends Controller
         $priceBreakdown['routing_mode'] = $routeContext['routing_mode'] ?? null;
 
         $rental = DB::transaction(function () use ($request, $validated, $routeContext, $startDate, $endDate, $priceBreakdown, $selectedContainerId) {
+            // Pessimistic lock — prevents double-booking under concurrent requests.
+            $isAvailable = Container::query()
+                ->lockForUpdate()
+                ->where('id', $selectedContainerId)
+                ->where('current_status', 'available')
+                ->whereDoesntHave('rentals', function ($q) use ($startDate, $endDate) {
+                    $q->whereIn('status', ['approved', 'scheduled', 'in_progress'])
+                        ->where(function ($d) use ($startDate, $endDate) {
+                            $d->whereBetween('start_date', [$startDate, $endDate])
+                                ->orWhereBetween('end_date', [$startDate, $endDate])
+                                ->orWhere(function ($deep) use ($startDate, $endDate) {
+                                    $deep->where('start_date', '<=', $startDate)
+                                        ->where(function ($o) use ($endDate) {
+                                            $o->whereNull('end_date')->orWhere('end_date', '>=', $endDate);
+                                        });
+                                });
+                        });
+                })
+                ->exists();
+
+            if (! $isAvailable) {
+                return null;
+            }
+
             $created = Rental::query()->create([
                 'user_id' => $request->user()->id,
                 'container_id' => $selectedContainerId,
@@ -431,6 +548,12 @@ class RentalController extends Controller
             return $created;
         });
 
+        if (! $rental instanceof Rental) {
+            return back()->withErrors([
+                'container_id' => 'Selected container is no longer available for this period.',
+            ]);
+        }
+
         return redirect()
             ->route('rentals.request.create')
             ->with('status', "Rental request #{$rental->id} submitted for approval.");
@@ -444,10 +567,8 @@ class RentalController extends Controller
     public function monitor(Request $request, Rental $rental, IotAuditChainService $iotAudit): Response
     {
         $user = $request->user();
-        $isOpsUser = in_array((string) ($user->role ?? ''), ['admin', 'operator', 'ops'], true);
-
-        if (! $isOpsUser && (int) $rental->user_id !== (int) $user->id) {
-            abort(403);
+        if ((int) $rental->user_id !== (int) $user->id) {
+            abort(404);
         }
 
         $this->verifyRentalCanAccessIotMonitor($rental);
@@ -499,6 +620,7 @@ class RentalController extends Controller
         }
 
         $historyRentals = Rental::query()
+            ->with(['originPort', 'destinationPort'])
             ->where('container_id', $rental->container_id)
             ->where('id', '!=', $rental->id)
             ->orderByDesc('start_date')
@@ -506,45 +628,6 @@ class RentalController extends Controller
             ->get();
 
         $opsSummary = null;
-        if ($isOpsUser) {
-            $activeStatuses = ['active', 'in_progress', 'scheduled'];
-
-            $totalActiveRentals = Rental::query()
-                ->whereIn('status', $activeStatuses)
-                ->count();
-
-            $activeIoTRentals = Rental::query()
-                ->join('containers', 'containers.id', '=', 'rentals.container_id')
-                ->whereIn('rentals.status', $activeStatuses)
-                ->where('containers.iot_active', true)
-                ->count();
-
-            $portsDistribution = DB::table('containers')
-                ->join('ports', 'ports.id', '=', 'containers.current_port_id')
-                ->select([
-                    'containers.current_port_id',
-                    'ports.name as port_name',
-                ])
-                ->selectRaw('COUNT(*) as total')
-                ->where('containers.iot_active', true)
-                ->groupBy('containers.current_port_id', 'ports.name')
-                ->orderByDesc('total')
-                ->limit(6)
-                ->get();
-
-            $opsSummary = [
-                'active_iot_rentals' => $activeIoTRentals,
-                'total_active_rentals' => $totalActiveRentals,
-                'iot_share_percent' => $totalActiveRentals > 0
-                    ? round($activeIoTRentals / $totalActiveRentals * 100, 1)
-                    : 0.0,
-                'ports_distribution' => $portsDistribution->map(static fn ($row) => [
-                    'port_id' => $row->current_port_id,
-                    'port_name' => $row->port_name,
-                    'total' => (int) $row->total,
-                ])->values(),
-            ];
-        }
 
         $iotAuditEvents = [];
         if ($container) {
@@ -632,10 +715,8 @@ class RentalController extends Controller
     public function container3d(Request $request, Rental $rental): Response|RedirectResponse
     {
         $user = $request->user();
-        $isOpsUser = in_array((string) ($user->role ?? ''), ['admin', 'operator', 'ops'], true);
-
-        if (! $isOpsUser && (int) $rental->user_id !== (int) $user->id) {
-            abort(403);
+        if ((int) $rental->user_id !== (int) $user->id) {
+            abort(404);
         }
 
         $this->verifyRentalCanAccessIotMonitor($rental);
@@ -688,10 +769,8 @@ class RentalController extends Controller
     public function update(UpdateRentalStatusRequest $request, Rental $rental): RedirectResponse
     {
         $user = $request->user();
-        $isOpsUser = in_array((string) ($user->role ?? ''), ['admin', 'operator', 'ops'], true);
-
-        if (! $isOpsUser && (int) $rental->user_id !== (int) $user->id) {
-            abort(403);
+        if ((int) $rental->user_id !== (int) $user->id) {
+            abort(404);
         }
 
         $validated = $request->validated();
@@ -699,7 +778,7 @@ class RentalController extends Controller
         $currentStatus = (string) $rental->status;
 
         $adminOnlyStatuses = ['approved', 'rejected', 'scheduled', 'in_progress', 'completed'];
-        if (! $isOpsUser && in_array($nextStatus, $adminOnlyStatuses, true)) {
+        if (in_array($nextStatus, $adminOnlyStatuses, true)) {
             return back()->withErrors([
                 'status' => 'Only administrators can set this status.',
             ]);
@@ -757,6 +836,10 @@ class RentalController extends Controller
 
     public function destroy(Request $request, Rental $rental): RedirectResponse
     {
+        if ((int) $rental->user_id !== (int) $request->user()->id) {
+            abort(404);
+        }
+
         DB::transaction(function () use ($request, $rental) {
             ActivityLogService::log(
                 $request->user()->id,
@@ -811,6 +894,7 @@ class RentalController extends Controller
             ->where('user_id', $userId)
             ->where('title', $title)
             ->where('message', $message)
+            ->where('is_read', false)
             ->exists();
 
         if ($exists) {
