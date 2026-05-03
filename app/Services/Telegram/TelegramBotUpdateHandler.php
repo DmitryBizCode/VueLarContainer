@@ -3,27 +3,30 @@
 namespace App\Services\Telegram;
 
 use App\Models\User;
+use App\Models\UserTelegramLink;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 final class TelegramBotUpdateHandler
 {
-    /** @var list<string> */
-    private const KEYBOARD_HELP = ['Help', '❓ Help', '📋 Help'];
+    private const AWAITING_CODE_TTL_SECONDS = 900;
 
-    /** @var list<string> */
-    private const KEYBOARD_STATUS = ['Status', '📊 Status'];
-
-    /** @var list<string> */
-    private const KEYBOARD_HOW = ['How to link', 'ℹ️ Link'];
-
-    /** @var list<string> */
-    private const KEYBOARD_UNLINK = ['Unlink', '🔓 Unlink'];
+    public const CACHE_AWAITING_PREFIX = 'telegram:awaiting_link_code:';
 
     public function __construct(
         private readonly TelegramBotClient $client,
+        private readonly TelegramAccountLinkService $accountLinks,
     ) {}
 
-    public function handleIncomingText(int $chatId, string $text): void
+    public function awaitingCodeCacheKey(int $chatId): string
+    {
+        return self::CACHE_AWAITING_PREFIX.$chatId;
+    }
+
+    /**
+     * @param  array{id?: int, username?: string|null, first_name?: string|null, last_name?: string|null}|null  $from
+     */
+    public function handleIncomingText(int $chatId, string $text, ?array $from = null): void
     {
         $text = trim($text);
         if ($text === '') {
@@ -36,22 +39,26 @@ final class TelegramBotUpdateHandler
         $first = $parts[0] ?? '';
         $commandBase = strtolower(preg_replace('#@\w+$#', '', $first));
 
+        $isCommand = str_starts_with($commandBase, '/');
+
+        if (! $isCommand && Cache::has($this->awaitingCodeCacheKey($chatId))) {
+            $this->processLinkAttempt($chatId, $text, $from);
+
+            return;
+        }
+
         if (in_array($commandBase, ['/stop', '/unlink'], true)) {
+            $this->clearAwaitingCode($chatId);
             $this->unlinkChat($chatId);
 
             return;
         }
 
-        if ($commandBase === '/linkinfo') {
-            $this->sendHowToLink($chatId);
-
-            return;
-        }
-
         if ($commandBase === '/start') {
+            $this->clearAwaitingCode($chatId);
             $code = $parts[1] ?? null;
             if ($code !== null && $code !== '') {
-                $this->tryLinkCode($chatId, $code);
+                $this->processLinkAttempt($chatId, $code, $from);
 
                 return;
             }
@@ -61,12 +68,14 @@ final class TelegramBotUpdateHandler
         }
 
         if ($commandBase === '/help') {
+            $this->clearAwaitingCode($chatId);
             $this->sendHelp($chatId);
 
             return;
         }
 
         if ($commandBase === '/status') {
+            $this->clearAwaitingCode($chatId);
             $this->sendStatus($chatId);
 
             return;
@@ -75,20 +84,21 @@ final class TelegramBotUpdateHandler
         if (in_array($commandBase, ['/link', '/connect'], true)) {
             $code = $parts[1] ?? null;
             if ($code === null || $code === '') {
-                $this->client->sendMessage($chatId, $this->linkCommandUsage(), [
+                Cache::put($this->awaitingCodeCacheKey($chatId), true, now()->addSeconds(self::AWAITING_CODE_TTL_SECONDS));
+                $this->client->sendMessage($chatId, $this->linkAwaitingCodeText(), [
                     'parse_mode' => 'HTML',
                     'reply_markup' => $this->persistentReplyKeyboard(),
                 ]);
 
                 return;
             }
-            $this->tryLinkCode($chatId, $code);
+            $this->processLinkAttempt($chatId, $code, $from);
 
             return;
         }
 
-        if (count($parts) === 1 && preg_match('/^[A-Z0-9]{6,12}$/i', $parts[0])) {
-            $this->tryLinkCode($chatId, $parts[0]);
+        if (count($parts) === 1 && preg_match('/^[A-Z0-9]{8,24}$/i', $parts[0])) {
+            $this->processLinkAttempt($chatId, $parts[0], $from);
 
             return;
         }
@@ -106,13 +116,13 @@ final class TelegramBotUpdateHandler
         try {
             $this->client->answerCallbackQuery($callbackQueryId);
         } catch (Throwable) {
-            // Ignore expired / duplicate callback ack
         }
 
         match ($data) {
             'h' => $this->sendHelp($chatId),
             's' => $this->sendStatus($chatId),
-            'i' => $this->sendHowToLink($chatId),
+            'i' => $this->beginAwaitingLinkCode($chatId),
+            'u' => $this->unlinkChat($chatId),
             'm' => $this->sendWelcome($chatId),
             default => $this->client->sendMessage($chatId, $this->unknownCommandText(), [
                 'parse_mode' => 'HTML',
@@ -121,23 +131,76 @@ final class TelegramBotUpdateHandler
         };
     }
 
+    private function beginAwaitingLinkCode(int $chatId): void
+    {
+        Cache::put($this->awaitingCodeCacheKey($chatId), true, now()->addSeconds(self::AWAITING_CODE_TTL_SECONDS));
+        $this->client->sendMessage($chatId, $this->linkAwaitingCodeText(), [
+            'parse_mode' => 'HTML',
+            'reply_markup' => $this->persistentReplyKeyboard(),
+        ]);
+    }
+
+    private function clearAwaitingCode(int $chatId): void
+    {
+        Cache::forget($this->awaitingCodeCacheKey($chatId));
+    }
+
+    /**
+     * @param  array{id?: int, username?: string|null, first_name?: string|null, last_name?: string|null}|null  $from
+     */
+    private function processLinkAttempt(int $chatId, string $code, ?array $from): void
+    {
+        $hadAwaiting = Cache::has($this->awaitingCodeCacheKey($chatId));
+        $result = $this->accountLinks->tryLink($chatId, $from, $code);
+
+        match ($result->status) {
+            TelegramLinkAttemptStatus::Linked => $this->client->sendMessage($chatId, $this->linkSuccessText(), [
+                'parse_mode' => 'HTML',
+                'reply_markup' => $this->persistentReplyKeyboard(),
+            ]),
+            TelegramLinkAttemptStatus::AlreadyLinked => $this->client->sendMessage($chatId, $this->alreadyLinkedText(), [
+                'parse_mode' => 'HTML',
+                'reply_markup' => $this->persistentReplyKeyboard(),
+            ]),
+            TelegramLinkAttemptStatus::InvalidCode => $this->client->sendMessage($chatId, $this->invalidCodeText(), [
+                'parse_mode' => 'HTML',
+                'reply_markup' => $this->persistentReplyKeyboard(),
+            ]),
+            TelegramLinkAttemptStatus::TelegramInUseByOtherUser => $this->client->sendMessage($chatId, $this->telegramInUseByOtherAccountText(), [
+                'parse_mode' => 'HTML',
+                'reply_markup' => $this->persistentReplyKeyboard(),
+            ]),
+        };
+
+        if ($result->status === TelegramLinkAttemptStatus::InvalidCode && $hadAwaiting) {
+            Cache::put($this->awaitingCodeCacheKey($chatId), true, now()->addSeconds(self::AWAITING_CODE_TTL_SECONDS));
+        } else {
+            $this->clearAwaitingCode($chatId);
+        }
+    }
+
     private function mapKeyboardLabelToCommand(string $text): ?string
     {
         $t = trim($text);
-        if (in_array($t, self::KEYBOARD_HELP, true)) {
-            return '/help';
-        }
-        if (in_array($t, self::KEYBOARD_STATUS, true)) {
-            return '/status';
-        }
-        if (in_array($t, self::KEYBOARD_HOW, true)) {
-            return '/linkinfo';
-        }
-        if (in_array($t, self::KEYBOARD_UNLINK, true)) {
-            return '/unlink';
-        }
+        $map = [
+            'Помощь' => '/help',
+            '❓ Помощь' => '/help',
+            'Help' => '/help',
+            '❓ Help' => '/help',
+            '📋 Help' => '/help',
+            '📖 Help' => '/help',
+            'Проверить статус' => '/status',
+            'Status' => '/status',
+            '📊 Status' => '/status',
+            'Привязать аккаунт' => '/link',
+            'ℹ️ Link' => '/link',
+            'How to link' => '/link',
+            'Отключить уведомления' => '/unlink',
+            'Unlink' => '/unlink',
+            '🔓 Unlink' => '/unlink',
+        ];
 
-        return null;
+        return $map[$t] ?? null;
     }
 
     /**
@@ -148,14 +211,12 @@ final class TelegramBotUpdateHandler
         return [
             'keyboard' => [
                 [
-                    ['text' => '❓ Help'],
-                    ['text' => '📊 Status'],
+                    ['text' => 'Привязать аккаунт'],
+                    ['text' => 'Проверить статус'],
                 ],
                 [
-                    ['text' => 'ℹ️ Link'],
-                ],
-                [
-                    ['text' => '🔓 Unlink'],
+                    ['text' => 'Отключить уведомления'],
+                    ['text' => 'Помощь'],
                 ],
             ],
             'resize_keyboard' => true,
@@ -174,58 +235,11 @@ final class TelegramBotUpdateHandler
 
     private function unlinkChat(int $chatId): void
     {
-        $user = User::query()->where('telegram_chat_id', $chatId)->first();
-        if ($user) {
-            $user->forceFill([
-                'telegram_chat_id' => null,
-                'telegram_link_code' => null,
-                'telegram_link_code_expires_at' => null,
-            ])->save();
-        }
+        $this->accountLinks->unlinkChat($chatId);
 
         $this->client->sendMessage($chatId, $this->unlinkSuccessText(), [
             'parse_mode' => 'HTML',
             'reply_markup' => $this->removeReplyKeyboard(),
-        ]);
-    }
-
-    private function tryLinkCode(int $chatId, string $code): void
-    {
-        $code = strtoupper(trim($code));
-
-        $user = User::query()
-            ->where('telegram_link_code', $code)
-            ->whereNotNull('telegram_link_code_expires_at')
-            ->where('telegram_link_code_expires_at', '>=', now())
-            ->first();
-
-        if (! $user) {
-            $this->client->sendMessage($chatId, $this->invalidCodeText(), [
-                'parse_mode' => 'HTML',
-                'reply_markup' => $this->persistentReplyKeyboard(),
-            ]);
-
-            return;
-        }
-
-        User::query()
-            ->where('telegram_chat_id', $chatId)
-            ->where('id', '!=', $user->id)
-            ->update([
-                'telegram_chat_id' => null,
-                'telegram_link_code' => null,
-                'telegram_link_code_expires_at' => null,
-            ]);
-
-        $user->forceFill([
-            'telegram_chat_id' => $chatId,
-            'telegram_link_code' => null,
-            'telegram_link_code_expires_at' => null,
-        ])->save();
-
-        $this->client->sendMessage($chatId, $this->linkSuccessText(), [
-            'parse_mode' => 'HTML',
-            'reply_markup' => $this->persistentReplyKeyboard(),
         ]);
     }
 
@@ -234,13 +248,16 @@ final class TelegramBotUpdateHandler
         $app = e((string) config('app.name', 'App'));
 
         $body = <<<HTML
-<b>{$app}</b> · Telegram notifications
+✨ <b>Добро пожаловать!</b>
 
-<b>Link</b> (same steps as the blue card on the site):
-1 · Profile → Notifications → code
-2 · Paste the code <u>here</u> or <b>Open in Telegram</b> on the web
+<b>{$app}</b> — уведомления в Telegram.
 
-<b>Menu</b> ↔ next to the input · use the <b>button rows</b> below
+<b>Как подключить</b>
+1 · Личный кабинет → уведомления → <b>код привязки</b>
+2 · Нажмите <b>«Привязать аккаунт»</b> и отправьте код сюда
+3 · Или откройте ссылку с сайта (кнопка «Открыть в Telegram»)
+
+<b>Меню</b> — кнопки под полем ввода.
 HTML;
 
         $this->client->sendMessage($chatId, $body, [
@@ -254,31 +271,15 @@ HTML;
         $app = e((string) config('app.name', 'App'));
 
         $body = <<<HTML
-<b>{$app}</b> — shortcuts
+<b>{$app}</b> — команды
 
-• <code>/status</code> — linked / delivery on?
-• <code>/link CODE</code> — or paste <code>CODE</code> alone
-• <code>/unlink</code> — disconnect
+• <code>/start</code> — главное меню
+• <code>/link</code> — привязка (затем код из кабинета)
+• <code>/status</code> — статус привязки
+• <code>/unlink</code> — отключить этот Telegram
+• <code>/help</code> — эта подсказка
 
-More: open <b>Menu</b> beside the input field.
-HTML;
-
-        $this->client->sendMessage($chatId, $body, [
-            'parse_mode' => 'HTML',
-            'reply_markup' => $this->persistentReplyKeyboard(),
-        ]);
-    }
-
-    private function sendHowToLink(int $chatId): void
-    {
-        $body = <<<'HTML'
-<b>Link in 3 steps</b> (same card as on the site)
-
-1 · Website → <b>Profile</b> → <b>Notifications</b>
-2 · <b>Get connection code</b>
-3 · <b>Open in Telegram</b> or paste the code here
-
-New code if this one expired.
+Код одноразовый и с ограниченным сроком — при необходимости создайте новый в профиле.
 HTML;
 
         $this->client->sendMessage($chatId, $body, [
@@ -289,9 +290,12 @@ HTML;
 
     private function sendStatus(int $chatId): void
     {
-        $user = User::query()->where('telegram_chat_id', $chatId)->first();
+        $link = UserTelegramLink::query()
+            ->where('telegram_chat_id', $chatId)
+            ->where('status', UserTelegramLink::STATUS_ACTIVE)
+            ->first();
 
-        if (! $user) {
+        if ($link === null) {
             $this->client->sendMessage($chatId, $this->statusNotLinkedText(), [
                 'parse_mode' => 'HTML',
                 'reply_markup' => $this->persistentReplyKeyboard(),
@@ -300,12 +304,13 @@ HTML;
             return;
         }
 
-        $telegramOn = $user->notification_telegram_enabled;
+        $user = User::query()->find($link->user_id);
+        $telegramOn = $user?->notification_telegram_enabled ?? false;
         $hint = $telegramOn
-            ? '✅ Linked · delivery <b>on</b>'
-            : '✅ Linked · turn delivery <b>on</b> in Profile → Notifications';
+            ? '✅ Привязано · доставка уведомлений <b>включена</b> в профиле'
+            : '✅ Привязано · включите канал Telegram в профиле, чтобы получать push';
 
-        $body = "<b>Status</b>\n{$hint}";
+        $body = "<b>Статус</b>\n{$hint}";
 
         $this->client->sendMessage($chatId, $body, [
             'parse_mode' => 'HTML',
@@ -313,46 +318,71 @@ HTML;
         ]);
     }
 
-    private function linkCommandUsage(): string
+    private function linkAwaitingCodeText(): string
     {
         return <<<'HTML'
-Use: <code>/link YOURCODE</code>
-or send <code>YOURCODE</code> alone.
+🔑 <b>Привязка аккаунта</b>
+
+Отправьте <b>одним сообщением</b> код из личного кабинета (раздел уведомлений).
+
+Срок действия кода ограничен. Если истёк — сгенерируйте новый на сайте.
 HTML;
     }
 
     private function unknownCommandText(): string
     {
         return <<<'HTML'
-Paste your <b>code</b> from the website, or tap <b>Help</b>.
+Не понял запрос. Отправьте <b>код привязки</b> или нажмите <b>«Помощь»</b>.
 HTML;
     }
 
     private function invalidCodeText(): string
     {
         return <<<'HTML'
-Code invalid or expired — generate a new one under <b>Notifications</b>.
+❌ Код недействителен или истёк. Создайте новый в личном кабинете.
 HTML;
     }
 
     private function linkSuccessText(): string
     {
         return <<<'HTML'
-✅ <b>Linked.</b> Enable Telegram in Notifications to get pushes.
+🎉 <b>Аккаунт подключён</b>
+
+Уведомления для этого Telegram <b>активированы</b> (если канал включён в профиле на сайте).
+
+Вы будете получать важные события: заявки, сообщения и системные оповещения.
+HTML;
+    }
+
+    private function alreadyLinkedText(): string
+    {
+        return <<<'HTML'
+✅ Этот Telegram уже привязан к вашему аккаунту на сайте. Данные обновлены.
+HTML;
+    }
+
+    private function telegramInUseByOtherAccountText(): string
+    {
+        return <<<'HTML'
+⛔️ Этот Telegram уже привязан к <b>другому</b> аккаунту на сайте.
+
+Один аккаунт Telegram нельзя связать с двумя разными профилями. Войдите на сайте под нужным пользователем или отвяжите Telegram в том профиле, где он подключён.
 HTML;
     }
 
     private function unlinkSuccessText(): string
     {
         return <<<'HTML'
-🔓 <b>Unlinked.</b> Reconnect anytime from the website.
+🔓 <b>Уведомления отключены</b> для этого чата.
+
+Подключить снова можно в любой момент через личный кабинет.
 HTML;
     }
 
     private function statusNotLinkedText(): string
     {
         return <<<'HTML'
-Not linked yet — get a code under <b>Profile → Notifications</b>, then paste it here.
+Ещё не привязано. Получите код в личном кабинете и нажмите «Привязать аккаунт».
 HTML;
     }
 }

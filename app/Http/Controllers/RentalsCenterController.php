@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Port;
 use App\Models\Rental;
-use Carbon\Carbon;
+use App\Models\ShipmentItem;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,8 +29,7 @@ class RentalsCenterController extends Controller
         $userId = (int) $user->id;
         $now = CarbonImmutable::now();
 
-        $baseOverviewQuery = DB::table('rentals');
-        $baseOverviewQuery->where('user_id', $userId);
+        $baseOverviewQuery = Rental::query()->where('user_id', $userId);
 
         $imminentDays = max(0, (int) config('logistics_map.imminent_start_horizon_days', 60));
         $latestAllowedStart = $now->addDays($imminentDays);
@@ -61,7 +59,7 @@ class RentalsCenterController extends Controller
                 ->count(),
         ];
 
-        $query = DB::table('rentals')
+        $query = Rental::query()
             ->join('containers', 'containers.id', '=', 'rentals.container_id')
             ->leftJoin('ports as origin_ports', 'origin_ports.id', '=', 'rentals.origin_port_id')
             ->leftJoin('ports as destination_ports', 'destination_ports.id', '=', 'rentals.destination_port_id')
@@ -118,7 +116,7 @@ class RentalsCenterController extends Controller
         $rentalIdList = collect($rentals->items())->pluck('id')->map(fn ($v) => (int) $v)->values()->all();
         $segmentsByRentalId = $rentalIdList === []
             ? []
-            : DB::table('shipment_items as si')
+            : ShipmentItem::query()->from('shipment_items as si')
                 ->join('shipments as s', 's.id', '=', 'si.shipment_id')
                 ->join('routes as r', 'r.id', '=', 's.route_id')
                 ->leftJoin('ports as op', 'op.id', '=', 'r.origin_port_id')

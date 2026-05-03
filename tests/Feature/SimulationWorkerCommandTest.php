@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Metric;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SimulationWorkerCommandTest extends TestCase
@@ -18,14 +18,12 @@ class SimulationWorkerCommandTest extends TestCase
 
     protected function createIotContainer(): Container
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Workerland '.uniqid(),
             'iso_code' => 'W'.str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT),
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Worker Owner',
             'email' => 'worker-owner-'.uniqid().'@test.local',

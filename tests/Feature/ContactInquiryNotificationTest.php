@@ -31,7 +31,7 @@ class ContactInquiryNotificationTest extends TestCase
         $response->assertRedirect(route('contact'));
         $this->assertDatabaseHas('inquiries', [
             'email' => 'jane@example.com',
-            'status' => 'new',
+            'handling_status' => Inquiry::HANDLING_NEW,
             'source' => 'website',
         ]);
 

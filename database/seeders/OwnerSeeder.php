@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Owner;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class OwnerSeeder extends Seeder
 {
@@ -19,11 +19,10 @@ class OwnerSeeder extends Seeder
             'Black Sea Trade Fleet',
         ];
 
-        if (DB::table('owners')->whereIn('name', $names)->count() >= count($names)) {
+        if (Owner::query()->whereIn('name', $names)->count() >= count($names)) {
             return;
         }
 
-        $now = now();
         $rows = [
             ['name' => 'Blue Horizon Logistics', 'email' => 'operations@bluehorizon.example', 'phone_number' => '+380441110101'],
             ['name' => 'North Sea Container Group', 'email' => 'dispatch@northsea.example', 'phone_number' => '+494044420202'],
@@ -35,16 +34,13 @@ class OwnerSeeder extends Seeder
         ];
 
         foreach ($rows as $row) {
-            if (DB::table('owners')->where('name', $row['name'])->exists()) {
-                continue;
-            }
-            DB::table('owners')->insert([
-                'name' => $row['name'],
-                'email' => $row['email'],
-                'phone_number' => $row['phone_number'],
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            Owner::query()->firstOrCreate(
+                ['name' => $row['name']],
+                [
+                    'email' => $row['email'],
+                    'phone_number' => $row['phone_number'],
+                ]
+            );
         }
     }
 }

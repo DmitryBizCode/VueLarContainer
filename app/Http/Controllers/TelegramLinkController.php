@@ -2,40 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\UserTelegramLink;
+use App\Services\Telegram\TelegramLinkCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class TelegramLinkController extends Controller
 {
+    public function __construct(
+        private readonly TelegramLinkCodeService $linkCodes,
+    ) {}
+
     public function createLinkCode(Request $request): JsonResponse
     {
         $user = $request->user();
-
-        $code = strtoupper(Str::random(8));
-        $user->forceFill([
-            'telegram_link_code' => $code,
-            'telegram_link_code_expires_at' => now()->addMinutes(15),
-        ])->save();
+        $issued = $this->linkCodes->issueForUser($user);
 
         return response()->json([
-            'code' => $code,
-            'expires_at' => $user->telegram_link_code_expires_at?->toIso8601String(),
+            'code' => $issued['plain'],
+            'expires_at' => $issued['expires_at']->toIso8601String(),
             'bot' => [
                 'username' => (string) config('services.telegram.bot_username', ''),
             ],
         ]);
     }
 
-    public function unlink(Request $request): JsonResponse
+    public function destroyLink(Request $request, UserTelegramLink $link): JsonResponse
     {
         $user = $request->user();
+        if ((int) $link->user_id !== (int) $user->id) {
+            abort(403);
+        }
 
-        $user->forceFill([
-            'telegram_chat_id' => null,
-            'telegram_link_code' => null,
-            'telegram_link_code_expires_at' => null,
-        ])->save();
+        $link->delete();
 
         return response()->json(['ok' => true]);
     }

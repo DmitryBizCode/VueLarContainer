@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Metric;
 use App\Models\Owner;
 use App\Models\Port;
@@ -11,7 +12,6 @@ use App\Models\User;
 use App\Services\TelemetryAnalyticsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class MonitorChartsTelemetryScopeTest extends TestCase
@@ -24,14 +24,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
      */
     public function test_chart_series_treats_null_rental_metrics_as_visible_for_rental(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Scopeland',
             'iso_code' => 'SC',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Scope Owner',
             'email' => 'scope-owner@test.local',
@@ -102,14 +100,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_chart_series_time_buckets_cover_full_window_with_median_aggregation(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Tailend',
             'iso_code' => 'TE',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Tail Owner',
             'email' => 'tail-owner@test.local',
@@ -186,14 +182,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_chart_series_discrete_bucket_uses_max_per_bucket_for_pump(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Pumpbucket',
             'iso_code' => 'PB',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Pump Owner',
             'email' => 'pump-owner@test.local',
@@ -283,14 +277,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_door_open_window_series_is_state_transitions_not_buckets(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Doorjump',
             'iso_code' => 'DJ',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Jump Owner',
             'email' => 'jump-owner@test.local',
@@ -379,14 +371,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_chart_series_raw_tail_caps_at_chart_max_points(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Tailland',
             'iso_code' => 'TL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Tail Owner',
             'email' => 'tail-owner@test.local',
@@ -461,14 +451,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_chart_series_includes_metrics_for_sibling_rental_same_lessee_on_container(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Siblingland',
             'iso_code' => 'SB',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Sibling Owner',
             'email' => 'sibling-owner@test.local',
@@ -551,14 +539,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
 
     public function test_chart_series_excludes_other_lessees_rental_metrics(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Otherland',
             'iso_code' => 'OT',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Other Owner',
             'email' => 'other-owner@test.local',
@@ -706,14 +692,12 @@ class MonitorChartsTelemetryScopeTest extends TestCase
      */
     private function createScopedFixtures(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Lookbackland',
             'iso_code' => 'LB',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'LB Owner',
             'email' => 'lb-owner@test.local',

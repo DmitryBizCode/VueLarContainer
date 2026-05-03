@@ -46,7 +46,7 @@ class AdminFinanceController extends Controller
             'report_date_to' => ['nullable', 'date', 'after_or_equal:report_date_from'],
         ]);
 
-        $baseQuery = DB::table('transactions')->join('rentals', 'rentals.id', '=', 'transactions.rental_id');
+        $baseQuery = Transaction::query()->join('rentals', 'rentals.id', '=', 'transactions.rental_id');
 
         $overview = (clone $baseQuery)->selectRaw("
             COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('".implode("','", $txGroups['success'])."') THEN transactions.amount ELSE 0 END), 0) as paid_amount,
@@ -59,7 +59,7 @@ class AdminFinanceController extends Controller
         ")->first();
 
         $transactionsByStatus = Cache::remember('admin_finance:transactions_by_status:v1', now()->addMinutes(5), function () {
-            return DB::table('transactions')
+            return Transaction::query()
                 ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(amount), 0) as amount_sum')
                 ->groupBy('status')
                 ->orderBy('status')
@@ -74,7 +74,7 @@ class AdminFinanceController extends Controller
         });
 
         $rentalsByStatus = Cache::remember('admin_finance:rentals_by_status:v1', now()->addMinutes(5), function () {
-            return DB::table('rentals')
+            return Rental::query()
                 ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
                 ->groupBy('status')
                 ->orderBy('status')
@@ -89,7 +89,7 @@ class AdminFinanceController extends Controller
         });
 
         $rentalsByPaymentStatus = Cache::remember('admin_finance:rentals_by_payment_status:v1', now()->addMinutes(5), function () {
-            return DB::table('rentals')
+            return Rental::query()
                 ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
                 ->groupBy('payment_status')
                 ->orderBy('payment_status')
@@ -104,12 +104,12 @@ class AdminFinanceController extends Controller
         });
 
         $rejectedApproval = Cache::remember('admin_finance:rejected_approval:v1', now()->addMinutes(5), function () {
-            $row = DB::table('rentals')
+            $row = Rental::query()
                 ->selectRaw('COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
                 ->whereRaw("LOWER(COALESCE(payment_status, '')) = 'rejected_by_approval'")
                 ->first();
 
-            $txAmount = (float) DB::table('transactions')
+            $txAmount = (float) Transaction::query()
                 ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
                 ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
                 ->sum('transactions.amount');
@@ -121,9 +121,9 @@ class AdminFinanceController extends Controller
             ];
         });
 
-        $rentalsSummary = DB::table('rentals')
+        $rentalsSummary = Rental::query()
             ->leftJoinSub(
-                DB::table('transactions')
+                Transaction::query()
                     ->select('rental_id')
                     ->whereRaw("LOWER(status) IN ('paid','completed','succeeded','success')")
                     ->distinct(),
@@ -251,7 +251,7 @@ class AdminFinanceController extends Controller
         });
 
         $syntheticLedgerPrefix = (string) config('finance.ledger.external_id_prefix', 'ledger:rental:');
-        $syntheticRejectedTransactions = DB::table('rentals')
+        $syntheticRejectedTransactions = Rental::query()
             ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
             ->whereNotExists(function ($q) {
                 $q->selectRaw('1')
@@ -284,7 +284,7 @@ class AdminFinanceController extends Controller
             ->values()
             ->all();
 
-        $syntheticPendingApprovalTransactions = DB::table('rentals')
+        $syntheticPendingApprovalTransactions = Rental::query()
             ->whereRaw('LOWER(rentals.status) = ?', ['pending_approval'])
             ->whereNotExists(function ($q) {
                 $q->selectRaw('1')
@@ -338,7 +338,7 @@ class AdminFinanceController extends Controller
         }
 
         $statusOptions = Cache::remember('admin_finance:status_options:v1', now()->addMinutes(30), function () {
-            $distinct = DB::table('transactions')
+            $distinct = Transaction::query()
                 ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status')
                 ->distinct()
                 ->orderBy('status')
@@ -351,7 +351,7 @@ class AdminFinanceController extends Controller
         });
 
         $paymentStatusOptions = Cache::remember('admin_finance:payment_status_options:v1', now()->addMinutes(30), function () {
-            return DB::table('rentals')
+            return Rental::query()
                 ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status')
                 ->distinct()
                 ->orderBy('payment_status')
@@ -486,7 +486,7 @@ class AdminFinanceController extends Controller
 
     private function buildReportData(string $dateFrom, string $dateTo): array
     {
-        $overview = DB::table('transactions')
+        $overview = Transaction::query()
             ->whereDate('transaction_date', '>=', $dateFrom)
             ->whereDate('transaction_date', '<=', $dateTo)
             ->selectRaw("
@@ -502,7 +502,7 @@ class AdminFinanceController extends Controller
         $syntheticLedgerPrefix = (string) config('finance.ledger.external_id_prefix', 'ledger:rental:');
 
         // Rentals awaiting approval may have no PSP transaction yet, but should still be visible in finance reports.
-        $syntheticPendingApproval = DB::table('rentals')
+        $syntheticPendingApproval = Rental::query()
             ->whereRaw('LOWER(status) = ?', ['pending_approval'])
             ->whereDate('updated_at', '>=', $dateFrom)
             ->whereDate('updated_at', '<=', $dateTo)
@@ -515,7 +515,7 @@ class AdminFinanceController extends Controller
         $syntheticPendingCount = $syntheticPendingApproval->count();
         $syntheticPendingAmount = (float) $syntheticPendingApproval->sum('price');
 
-        $syntheticRejectedApproval = DB::table('rentals')
+        $syntheticRejectedApproval = Rental::query()
             ->whereRaw('LOWER(payment_status) = ?', ['rejected_by_approval'])
             ->whereDate('updated_at', '>=', $dateFrom)
             ->whereDate('updated_at', '<=', $dateTo)
@@ -545,7 +545,7 @@ class AdminFinanceController extends Controller
     /** Rentals that are "paid": payment_status = paid OR have at least one paid transaction. */
     private function rentalsPaidRevenueQuery()
     {
-        $paidRentalIds = DB::table('transactions')
+        $paidRentalIds = Transaction::query()
             ->whereRaw("LOWER(status) IN ('paid','completed','succeeded','success')")
             ->distinct()
             ->pluck('rental_id');
@@ -758,16 +758,16 @@ class AdminFinanceController extends Controller
 
     private function buildMetrics(): array
     {
-        $total = (int) (DB::table('transactions')->count());
+        $total = (int) (Transaction::query()->count());
         $txGroups = FinanceStatusGroups::transactionGroups();
-        $paidCount = (int) DB::table('transactions')
+        $paidCount = (int) Transaction::query()
             ->whereRaw("LOWER(status) IN ('".implode("','", $txGroups['success'])."')")
             ->count();
-        $failedCount = (int) DB::table('transactions')
+        $failedCount = (int) Transaction::query()
             ->whereRaw("LOWER(status) IN ('".implode("','", $txGroups['failure'])."')")
             ->count();
 
-        $totalPaidAmount = (float) DB::table('transactions')
+        $totalPaidAmount = (float) Transaction::query()
             ->whereRaw("LOWER(status) IN ('".implode("','", $txGroups['success'])."')")
             ->sum('amount');
         $avgTransaction = $paidCount > 0 ? $totalPaidAmount / $paidCount : 0;

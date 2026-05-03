@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Country;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -14,7 +14,7 @@ class DemoAccountSeeder extends Seeder
 {
     public function run(): void
     {
-        $countryId = DB::table('countries')->orderBy('id')->value('id');
+        $countryId = Country::query()->orderBy('id')->value('id');
 
         User::query()->firstOrCreate(
             ['email' => 'romeobackend@gmail.com'],

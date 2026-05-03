@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Models\Shipment;
 use App\Models\Vessel;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Advances shipments and their vessels based on scheduled departure / arrival timestamps.
@@ -83,7 +82,7 @@ class ShipmentScheduleAdvancerService
     private function syncVesselStatuses(CarbonImmutable $now): int
     {
         $synced = 0;
-        $rows = DB::table('shipments')
+        $rows = Shipment::query()
             ->select('vessel_id', 'status', 'departure_date', 'arrival_date', 'port_operations_until', 'updated_at')
             ->whereRaw('LOWER(status) IN (?,?,?,?)', ['scheduled', 'in_transit', 'in_progress', 'arrived'])
             ->orderByDesc('updated_at')

@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -20,14 +20,12 @@ class RentalRequestCreateRoutesTest extends TestCase
     ): void {
         config(['logistics.rental_request_show_all_open_routes' => false]);
 
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'RRLand',
             'iso_code' => 'RR',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'RR Owner',
@@ -117,14 +115,12 @@ class RentalRequestCreateRoutesTest extends TestCase
     {
         config(['logistics.rental_request_show_all_open_routes' => true]);
 
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'RRLandAll',
             'iso_code' => 'RA',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'RR All Owner',

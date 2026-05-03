@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Container;
 use App\Models\ContainerSimulationSnapshot;
+use App\Models\Country;
 use App\Models\Metric;
 use App\Models\Owner;
 use App\Models\Port;
@@ -11,7 +12,6 @@ use App\Models\Rental;
 use App\Models\User;
 use App\Services\SimulationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SimulationBackgroundRentalResolutionTest extends TestCase
@@ -23,14 +23,12 @@ class SimulationBackgroundRentalResolutionTest extends TestCase
      */
     private function createContainerPortUser(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'SimRent '.uniqid(),
             'iso_code' => 'S'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT),
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Sim Owner',
             'email' => 'sim-owner-'.uniqid().'@test.local',

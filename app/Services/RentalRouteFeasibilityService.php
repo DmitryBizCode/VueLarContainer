@@ -141,7 +141,7 @@ class RentalRouteFeasibilityService
         $recommended = $minDays + 2;
 
         if ($totalWaitingHours > 0) {
-            $hints[] = "This routing includes waiting/handling time at ports (".$totalWaitingHours." hours).";
+            $hints[] = 'This routing includes waiting/handling time at ports ('.$totalWaitingHours.' hours).';
         }
 
         return [
@@ -159,9 +159,9 @@ class RentalRouteFeasibilityService
     }
 
     /**
-     * @param list<array<string,mixed>> $segments
-     * @param list<string> $warnings
-     * @param list<string> $hints
+     * @param  list<array<string,mixed>>  $segments
+     * @param  list<string>  $warnings
+     * @param  list<string>  $hints
      * @return array<string,mixed>
      */
     private function finalize(
@@ -191,4 +191,3 @@ class RentalRouteFeasibilityService
         ];
     }
 }
-

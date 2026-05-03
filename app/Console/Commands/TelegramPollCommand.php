@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Telegram\TelegramAccountLinkService;
 use App\Services\Telegram\TelegramBotClient;
 use App\Services\Telegram\TelegramBotUpdateHandler;
 use Illuminate\Console\Command;
@@ -25,7 +26,7 @@ class TelegramPollCommand extends Command
         $client = TelegramBotClient::fromConfig();
         $this->ensureBotCommandsRegistered($client);
 
-        $handler = new TelegramBotUpdateHandler($client);
+        $handler = new TelegramBotUpdateHandler($client, app(TelegramAccountLinkService::class));
         $pollInterval = max(1, (int) env('TELEGRAM_POLL_INTERVAL_SECONDS', 2));
 
         do {
@@ -104,7 +105,8 @@ class TelegramPollCommand extends Command
                 continue;
             }
 
-            $handler->handleIncomingText((int) $chatId, $text);
+            $from = isset($message['from']) && is_array($message['from']) ? $message['from'] : null;
+            $handler->handleIncomingText((int) $chatId, $text, $from);
         }
 
         if ($maxUpdateId !== null) {

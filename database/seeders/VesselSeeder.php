@@ -2,14 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Models\Port;
+use App\Models\Vessel;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class VesselSeeder extends Seeder
 {
     public function run(): void
     {
-        $portIds = DB::table('ports')->pluck('id', 'name');
+        $portIds = Port::query()->pluck('id', 'name');
         $now = now();
 
         $hubPorts = array_values(array_unique(array_filter([
@@ -27,12 +28,12 @@ class VesselSeeder extends Seeder
             $portIds['Port of Barcelona'] ?? null,
         ])));
 
-        if ($hubPorts !== [] && ! DB::table('vessels')->where('imo_number', 'like', '910%')->exists()) {
+        if ($hubPorts !== [] && ! Vessel::query()->where('imo_number', 'like', '910%')->exists()) {
             $statuses = ['active', 'active', 'active', 'in_port', 'in_transit', 'scheduled'];
             for ($i = 1; $i <= 28; $i++) {
                 $portId = $hubPorts[($i - 1) % count($hubPorts)];
                 $imo = str_pad((string) (9100000 + $i), 7, '0', STR_PAD_LEFT);
-                DB::table('vessels')->insert([
+                Vessel::query()->create([
                     'name' => sprintf('MV Baltic Runner %02d', $i),
                     'imo_number' => $imo,
                     'capacity_teu' => 1800 + ($i * 80),
@@ -41,14 +42,12 @@ class VesselSeeder extends Seeder
                     'current_port_id' => $portId,
                     'berth_busy_until' => null,
                     'out_of_service_until' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
                 ]);
             }
         }
 
         // Extra fleet covering secondary ports so smaller allowlist ports actually have assignable vessels.
-        if (! DB::table('vessels')->where('imo_number', 'like', '911%')->exists()) {
+        if (! Vessel::query()->where('imo_number', 'like', '911%')->exists()) {
             $extraPorts = array_values(array_unique(array_filter([
                 $portIds['Port of Amsterdam'] ?? null,
                 $portIds['Port of Zeebrugge'] ?? null,
@@ -100,7 +99,7 @@ class VesselSeeder extends Seeder
             for ($i = 1; $i <= $count * 2; $i++) {
                 $portId = $extraPorts[($i - 1) % $count];
                 $imo = str_pad((string) (9110000 + $i), 7, '0', STR_PAD_LEFT);
-                DB::table('vessels')->insert([
+                Vessel::query()->create([
                     'name' => sprintf('%s %02d', $barge[$i % count($barge)], $i),
                     'imo_number' => $imo,
                     'capacity_teu' => 900 + ($i * 40),
@@ -110,8 +109,6 @@ class VesselSeeder extends Seeder
                     'current_port_id' => $portId,
                     'berth_busy_until' => null,
                     'out_of_service_until' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
                 ]);
             }
         }

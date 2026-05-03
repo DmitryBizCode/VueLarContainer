@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\Incident;
+use App\Models\Notification;
+use App\Models\Rental;
+use App\Models\Shipment;
+use App\Models\ShipmentItem;
+use App\Models\Transaction;
 use App\Support\FinanceStatusGroups;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,7 +32,7 @@ class DashboardController extends Controller
         $this->persistCriticalNotifications((int) $user->id);
         $this->persistDerivedNotifications((int) $user->id);
 
-        $paidTxSub = DB::table('transactions')
+        $paidTxSub = Transaction::query()
             ->select('rental_id')
             ->whereRaw("LOWER(status) IN ('".implode("','", $txGroups['success'])."')")
             ->distinct();
@@ -33,7 +40,7 @@ class DashboardController extends Controller
         $now = Carbon::now();
 
         $stats = [
-            'activeRentals' => DB::table('rentals')
+            'activeRentals' => Rental::query()
                 ->leftJoinSub($paidTxSub, 'paid_tx', 'paid_tx.rental_id', '=', 'rentals.id')
                 ->where('rentals.user_id', $user->id)
                 ->whereIn('rentals.status', ['active', 'in_progress', 'scheduled', 'approved'])
@@ -47,7 +54,7 @@ class DashboardController extends Controller
                         ->orWhereNotNull('paid_tx.rental_id');
                 })
                 ->count(),
-            'completedRentals' => DB::table('rentals')
+            'completedRentals' => Rental::query()
                 ->leftJoinSub($paidTxSub, 'paid_tx', 'paid_tx.rental_id', '=', 'rentals.id')
                 ->where('rentals.user_id', $user->id)
                 ->where(function ($q) use ($now) {
@@ -64,16 +71,16 @@ class DashboardController extends Controller
                         ->orWhereNotNull('paid_tx.rental_id');
                 })
                 ->count(),
-            'unreadNotifications' => (int) DB::table('notifications')
+            'unreadNotifications' => (int) Notification::query()
                 ->where('user_id', $user->id)
                 ->where('is_read', false)
                 ->count(),
-            'recentActivityCount' => DB::table('activity_logs')
+            'recentActivityCount' => ActivityLog::query()
                 ->where('user_id', $user->id)
                 ->count(),
         ];
 
-        $transactionsByStatus = DB::table('transactions')
+        $transactionsByStatus = Transaction::query()
             ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
             ->where('rentals.user_id', $user->id)
             ->selectRaw('LOWER(COALESCE(transactions.status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(transactions.amount), 0) as amount_sum')
@@ -88,7 +95,7 @@ class DashboardController extends Controller
             ])
             ->all();
 
-        $rentalsByStatus = DB::table('rentals')
+        $rentalsByStatus = Rental::query()
             ->where('user_id', $user->id)
             ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
             ->groupBy('status')
@@ -102,7 +109,7 @@ class DashboardController extends Controller
             ])
             ->all();
 
-        $rentalsByPaymentStatus = DB::table('rentals')
+        $rentalsByPaymentStatus = Rental::query()
             ->where('user_id', $user->id)
             ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
             ->groupBy('payment_status')
@@ -119,14 +126,14 @@ class DashboardController extends Controller
         $rejectedApproval = [
             'count' => (int) ($rentalsByPaymentStatus['rejected_by_approval']['count'] ?? 0),
             'lostRevenuePriceSum' => (float) ($rentalsByPaymentStatus['rejected_by_approval']['price_sum'] ?? 0),
-            'txAmountSum' => (float) DB::table('transactions')
+            'txAmountSum' => (float) Transaction::query()
                 ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
                 ->where('rentals.user_id', $user->id)
                 ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
                 ->sum('transactions.amount'),
         ];
 
-        $financialOverview = DB::table('transactions')
+        $financialOverview = Transaction::query()
             ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
             ->where('rentals.user_id', $user->id)
             ->selectRaw("
@@ -139,7 +146,7 @@ class DashboardController extends Controller
             ")
             ->first();
 
-        $lastRejectedApprovalAt = DB::table('rentals')
+        $lastRejectedApprovalAt = Rental::query()
             ->where('user_id', $user->id)
             ->whereRaw('LOWER(payment_status) = ?', ['rejected_by_approval'])
             ->max('updated_at');
@@ -151,7 +158,7 @@ class DashboardController extends Controller
                 : (strtotime((string) $lastRejectedApprovalAt) > strtotime((string) $lastTransactionAt) ? $lastRejectedApprovalAt : $lastTransactionAt);
         }
 
-        $syntheticPendingApproval = DB::table('rentals')
+        $syntheticPendingApproval = Rental::query()
             ->where('user_id', $user->id)
             ->whereRaw('LOWER(status) = ?', ['pending_approval'])
             ->whereNotExists(function ($q) {
@@ -162,7 +169,7 @@ class DashboardController extends Controller
         $syntheticPendingApprovalAmount = (float) $syntheticPendingApproval->sum('price');
         $syntheticPendingApprovalCount = (int) $syntheticPendingApproval->count();
 
-        $shipmentIdsForUser = DB::table('shipment_items')
+        $shipmentIdsForUser = ShipmentItem::query()
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->where('rentals.user_id', $user->id)
             ->distinct()
@@ -173,7 +180,7 @@ class DashboardController extends Controller
         $now = Carbon::now();
         $shipmentHealthStatuses = ['scheduled', 'in_progress', 'in_transit'];
 
-        $shipmentOverview = DB::table('shipments')
+        $shipmentOverview = Shipment::query()
             ->whereIn('shipments.id', $shipmentIdsForUser)
             ->selectRaw("
                 COUNT(CASE WHEN LOWER(shipments.status) IN ('scheduled','in_progress','in_transit') THEN 1 END) as in_transit_count,
@@ -189,14 +196,14 @@ class DashboardController extends Controller
             ])
             ->first();
 
-        $containerIdsForUser = DB::table('rentals')
+        $containerIdsForUser = Rental::query()
             ->where('user_id', $user->id)
             ->distinct()
             ->pluck('container_id')
             ->filter()
             ->values();
 
-        $incidentOverview = DB::table('incidents')
+        $incidentOverview = Incident::query()
             ->where(function ($q) use ($shipmentIdsForUser, $containerIdsForUser) {
                 if ($shipmentIdsForUser->isNotEmpty()) {
                     $q->whereIn('incidents.shipment_id', $shipmentIdsForUser);
@@ -211,7 +218,7 @@ class DashboardController extends Controller
             ")
             ->first();
 
-        $topRoutes = DB::table('shipments')
+        $topRoutes = Shipment::query()
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->join('routes', 'routes.id', '=', 'shipments.route_id')
@@ -224,7 +231,7 @@ class DashboardController extends Controller
             ->limit(3)
             ->get();
 
-        $upcomingStarts = DB::table('rentals')
+        $upcomingStarts = Rental::query()
             ->where('user_id', $user->id)
             ->whereNotNull('start_date')
             ->whereBetween('start_date', [$now, $now->copy()->addDays(10)])
@@ -239,7 +246,7 @@ class DashboardController extends Controller
                 'date' => $row->start_date,
             ]);
 
-        $upcomingPayments = DB::table('rentals')
+        $upcomingPayments = Rental::query()
             ->where('user_id', $user->id)
             ->whereIn('payment_status', ['unpaid', 'pending'])
             ->whereNotNull('end_date')
@@ -255,7 +262,7 @@ class DashboardController extends Controller
                 'date' => $row->end_date,
             ]);
 
-        $upcomingArrivals = DB::table('shipments')
+        $upcomingArrivals = Shipment::query()
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->where('rentals.user_id', $user->id)
@@ -275,7 +282,7 @@ class DashboardController extends Controller
                 'date' => $row->arrival_date,
             ]);
 
-        $upcomingPortOpsDone = DB::table('shipments')
+        $upcomingPortOpsDone = Shipment::query()
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->where('rentals.user_id', $user->id)
@@ -303,7 +310,7 @@ class DashboardController extends Controller
             ->take(5)
             ->values();
 
-        $latestPersistedNotifications = DB::table('notifications')
+        $latestPersistedNotifications = Notification::query()
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(6)
@@ -312,7 +319,7 @@ class DashboardController extends Controller
 
         $latestNotifications = collect($latestPersistedNotifications)->values();
 
-        $recentRental = DB::table('rentals')
+        $recentRental = Rental::query()
             ->join('containers', 'containers.id', '=', 'rentals.container_id')
             ->leftJoin('shipment_items', 'shipment_items.rental_id', '=', 'rentals.id')
             ->leftJoin('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
@@ -348,7 +355,7 @@ class DashboardController extends Controller
             ])
             ->first();
 
-        $orderHistory = DB::table('rentals')
+        $orderHistory = Rental::query()
             ->join('containers', 'containers.id', '=', 'rentals.container_id')
             ->leftJoin('shipment_items', 'shipment_items.rental_id', '=', 'rentals.id')
             ->leftJoin('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
@@ -368,7 +375,7 @@ class DashboardController extends Controller
             ])
             ->get();
 
-        $recentActivities = DB::table('activity_logs')
+        $recentActivities = ActivityLog::query()
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(6)
@@ -438,7 +445,7 @@ class DashboardController extends Controller
     {
         $now = Carbon::now();
 
-        $paymentDueRentals = DB::table('rentals')
+        $paymentDueRentals = Rental::query()
             ->where('user_id', $userId)
             ->whereIn('payment_status', ['unpaid', 'pending'])
             ->whereNotNull('end_date')
@@ -453,7 +460,7 @@ class DashboardController extends Controller
             $this->storeNotificationIfMissing($userId, $title, $message, 'warning');
         }
 
-        $failedTransactions = DB::table('transactions')
+        $failedTransactions = Transaction::query()
             ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
             ->where('rentals.user_id', $userId)
             ->where('transactions.status', 'failed')
@@ -469,7 +476,7 @@ class DashboardController extends Controller
             $this->storeNotificationIfMissing($userId, $title, $message, 'error');
         }
 
-        $arrivalMilestones = DB::table('shipments')
+        $arrivalMilestones = Shipment::query()
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->where('rentals.user_id', $userId)
@@ -489,7 +496,7 @@ class DashboardController extends Controller
 
     private function storeNotificationIfMissing(int $userId, string $title, string $message, string $type): void
     {
-        $exists = DB::table('notifications')
+        $exists = Notification::query()
             ->where('user_id', $userId)
             ->where('title', $title)
             ->where('message', $message)
@@ -499,15 +506,13 @@ class DashboardController extends Controller
             return;
         }
 
-        DB::table('notifications')->insert([
+        Notification::query()->create([
             'user_id' => $userId,
             'title' => $title,
             'message' => $message,
             'type' => $type,
             'action_url' => null,
             'is_read' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
     }
 
@@ -515,7 +520,7 @@ class DashboardController extends Controller
     {
         $now = Carbon::now();
 
-        $newRental = DB::table('rentals')
+        $newRental = Rental::query()
             ->where('user_id', $userId)
             ->where('created_at', '>=', $now->copy()->subDays(2))
             ->orderByDesc('created_at')
@@ -531,7 +536,7 @@ class DashboardController extends Controller
             );
         }
 
-        $upcomingRental = DB::table('rentals')
+        $upcomingRental = Rental::query()
             ->where('user_id', $userId)
             ->whereNotNull('start_date')
             ->where('start_date', '>=', $now)
@@ -549,7 +554,7 @@ class DashboardController extends Controller
             );
         }
 
-        $inTransitShipment = DB::table('shipments')
+        $inTransitShipment = Shipment::query()
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->join('rentals', 'rentals.id', '=', 'shipment_items.rental_id')
             ->where('rentals.user_id', $userId)

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Rental;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class RentalsBackfillApprovalRejectPaymentStatusCommand extends Command
 {
@@ -17,7 +17,7 @@ class RentalsBackfillApprovalRejectPaymentStatusCommand extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
 
-        $base = DB::table('rentals')
+        $base = Rental::query()
             ->whereRaw('LOWER(status) = ?', ['rejected'])
             ->where(function ($q) {
                 $q->where('rejection_reason', 'like', self::PREFIX.'%')

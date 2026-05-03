@@ -21,7 +21,6 @@ class AdminInquiryHandlingTest extends TestCase
             'subject' => 'Quote',
             'message' => 'Need containers.',
             'source' => 'website',
-            'status' => 'new',
             'handling_status' => Inquiry::HANDLING_NEW,
             'admin_notes' => null,
             'converted_user_id' => null,

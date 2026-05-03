@@ -36,7 +36,6 @@ class User extends Authenticatable
         'commission_rate',
         'bonus_type',
         'bonus_value',
-        'telegram_chat_id',
         'notification_email_enabled',
         'notification_telegram_enabled',
     ];
@@ -49,8 +48,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'telegram_link_code',
-        'telegram_link_code_expires_at',
     ];
 
     /**
@@ -65,7 +62,6 @@ class User extends Authenticatable
             'password' => 'hashed',
             'commission_rate' => 'decimal:4',
             'bonus_value' => 'decimal:2',
-            'telegram_link_code_expires_at' => 'datetime',
             'notification_email_enabled' => 'boolean',
             'notification_telegram_enabled' => 'boolean',
         ];
@@ -89,5 +85,20 @@ class User extends Authenticatable
     public function receivedMessages(): HasMany
     {
         return $this->hasMany(UserMessage::class, 'recipient_user_id');
+    }
+
+    public function telegramLinks(): HasMany
+    {
+        return $this->hasMany(UserTelegramLink::class);
+    }
+
+    public function telegramLinkCodes(): HasMany
+    {
+        return $this->hasMany(TelegramLinkCode::class);
+    }
+
+    public function activeTelegramLinks(): HasMany
+    {
+        return $this->telegramLinks()->active();
     }
 }

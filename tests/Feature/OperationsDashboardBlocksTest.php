@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Notification;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -19,14 +19,12 @@ class OperationsDashboardBlocksTest extends TestCase
 
     private function seedBase(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Blocksland',
             'iso_code' => 'BL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',

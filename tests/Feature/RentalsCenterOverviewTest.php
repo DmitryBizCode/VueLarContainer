@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -20,14 +20,12 @@ class RentalsCenterOverviewTest extends TestCase
     /** @return array{countryId: int, port: Port, container: Container, user: User} */
     private function baseUserWithContainer(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'RCLand',
             'iso_code' => 'RC',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'RC Owner',

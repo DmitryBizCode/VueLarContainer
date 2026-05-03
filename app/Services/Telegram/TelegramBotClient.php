@@ -6,13 +6,15 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Throwable;
 
 final class TelegramBotClient
 {
     /**
      * Bump when changing {@see defaultBotCommands()} so poll re-runs setMyCommands.
      */
-    public const MY_COMMANDS_VERSION = 2;
+    public const MY_COMMANDS_VERSION = 3;
 
     public function __construct(
         private readonly string $token,
@@ -30,13 +32,11 @@ final class TelegramBotClient
     public static function defaultBotCommands(): array
     {
         return [
-            ['command' => 'start', 'description' => 'Welcome, buttons & how to connect'],
-            ['command' => 'help', 'description' => 'All commands & linking tips'],
-            ['command' => 'status', 'description' => 'Linked? Notifications on?'],
-            ['command' => 'link', 'description' => 'Link: /link YOURCODE'],
-            ['command' => 'connect', 'description' => 'Same as /link'],
-            ['command' => 'unlink', 'description' => 'Disconnect this chat'],
-            ['command' => 'stop', 'description' => 'Same as /unlink'],
+            ['command' => 'start', 'description' => 'Главное меню и приветствие'],
+            ['command' => 'link', 'description' => 'Привязать аккаунт (код из кабинета)'],
+            ['command' => 'status', 'description' => 'Проверить статус привязки'],
+            ['command' => 'unlink', 'description' => 'Отвязать этот Telegram'],
+            ['command' => 'help', 'description' => 'Справка по командам'],
         ];
     }
 
@@ -123,6 +123,33 @@ final class TelegramBotClient
             token: (string) config('services.telegram.bot_token', ''),
             timeoutSeconds: (int) config('services.telegram.timeout', 10),
         );
+    }
+
+    /**
+     * True when retrying the same chat will not help (blocked bot, deleted chat, etc.).
+     */
+    public static function isUnrecoverableChatDeliveryError(Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+        if ($e instanceof RequestException) {
+            $status = $e->response?->status();
+            if ($status === 403) {
+                return true;
+            }
+            $body = (string) $e->response?->body();
+            $message .= ' '.strtolower($body);
+        }
+
+        return Str::contains($message, [
+            'bot was blocked',
+            'blocked by the user',
+            'user is deactivated',
+            'chat not found',
+            'chat_id is empty',
+            'peer_id_invalid',
+            'have no rights to send',
+            'need administrator rights',
+        ]);
     }
 
     private function request(): PendingRequest

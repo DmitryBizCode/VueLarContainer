@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Country;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CountrySeeder extends Seeder
 {
@@ -23,7 +23,7 @@ class CountrySeeder extends Seeder
     public function run(): void
     {
         $isoCodes = array_keys(self::PHONE_CODES);
-        $existing = DB::table('countries')->whereIn('iso_code', $isoCodes)->pluck('iso_code')->toArray();
+        $existing = Country::query()->whereIn('iso_code', $isoCodes)->pluck('iso_code')->toArray();
 
         $now = now();
         $phoneCodes = self::PHONE_CODES;
@@ -31,7 +31,7 @@ class CountrySeeder extends Seeder
         if (count($existing) > 0) {
             foreach ($isoCodes as $code) {
                 if (isset($phoneCodes[$code])) {
-                    DB::table('countries')->where('iso_code', $code)->update(['phone_code' => $phoneCodes[$code], 'updated_at' => $now]);
+                    Country::query()->where('iso_code', $code)->update(['phone_code' => $phoneCodes[$code], 'updated_at' => $now]);
                 }
             }
             $this->ensureExtendedCountries($phoneCodes, $now);
@@ -39,7 +39,7 @@ class CountrySeeder extends Seeder
             return;
         }
 
-        DB::table('countries')->insert([
+        Country::insert([
             ['name' => 'Ukraine', 'iso_code' => 'UA', 'phone_code' => $phoneCodes['UA'], 'interest_tax' => 20.00, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Poland', 'iso_code' => 'PL', 'phone_code' => $phoneCodes['PL'], 'interest_tax' => 23.00, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Germany', 'iso_code' => 'DE', 'phone_code' => $phoneCodes['DE'], 'interest_tax' => 19.00, 'created_at' => $now, 'updated_at' => $now],
@@ -115,16 +115,14 @@ class CountrySeeder extends Seeder
 
         foreach ($extra as $row) {
             $iso = $row['iso_code'];
-            if (DB::table('countries')->where('iso_code', $iso)->exists()) {
+            if (Country::query()->where('iso_code', $iso)->exists()) {
                 continue;
             }
-            DB::table('countries')->insert([
+            Country::query()->create([
                 'name' => $row['name'],
                 'iso_code' => $iso,
                 'phone_code' => $phoneCodes[$iso] ?? '+0',
                 'interest_tax' => $row['interest_tax'],
-                'created_at' => $now,
-                'updated_at' => $now,
             ]);
         }
     }

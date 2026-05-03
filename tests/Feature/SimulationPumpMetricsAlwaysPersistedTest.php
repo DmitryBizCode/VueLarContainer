@@ -6,6 +6,7 @@ use App\DataTransferObjects\ActuatorInputDto;
 use App\Models\Container;
 use App\Models\ContainerSensor;
 use App\Models\ContainerSimulationSnapshot;
+use App\Models\Country;
 use App\Models\Metric;
 use App\Models\Owner;
 use App\Models\Port;
@@ -14,7 +15,6 @@ use App\Models\SensorType;
 use App\Models\User;
 use App\Services\SimulationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SimulationPumpMetricsAlwaysPersistedTest extends TestCase
@@ -27,14 +27,12 @@ class SimulationPumpMetricsAlwaysPersistedTest extends TestCase
      */
     public function test_pump_running_written_when_not_in_container_sensor_telemetry_keys(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Pumpland',
             'iso_code' => 'PL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Pump Owner',
             'email' => 'pump-owner-'.uniqid().'@test.local',

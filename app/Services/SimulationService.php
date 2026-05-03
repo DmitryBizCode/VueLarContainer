@@ -7,6 +7,7 @@ use App\DataTransferObjects\SimulationStateDto;
 use App\Models\Container;
 use App\Models\ContainerSimulationSnapshot;
 use App\Models\Rental;
+use App\Models\ShipmentItem;
 use App\Services\Metrics\TelemetryWriteBuffer;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,7 @@ class SimulationService
         $lat = $pt['lat'];
         $lng = $pt['lng'];
 
-        $row = DB::table('shipment_items')
+        $row = ShipmentItem::query()
             ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
             ->where('shipment_items.rental_id', $rental->id)
             ->orderByDesc('shipments.updated_at')

@@ -2,23 +2,25 @@
 
 namespace Database\Seeders;
 
+use App\Models\Container;
+use App\Models\Owner;
+use App\Models\Port;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class ContainerSeeder extends Seeder
 {
     public function run(): void
     {
-        if (DB::table('containers')->where('serial_number', 'like', 'VL-SEED-%')->exists()) {
+        if (Container::query()->where('serial_number', 'like', 'VL-SEED-%')->exists()) {
             return;
         }
 
-        $ownerIds = DB::table('owners')->orderBy('id')->pluck('id')->values()->all();
+        $ownerIds = Owner::query()->orderBy('id')->pluck('id')->values()->all();
         if ($ownerIds === []) {
             return;
         }
 
-        $portIds = DB::table('ports')->pluck('id', 'name');
+        $portIds = Port::query()->pluck('id', 'name');
         $portCycle = array_values(array_filter([
             $portIds['Port of Rotterdam'] ?? null,
             $portIds['Port of Hamburg'] ?? null,
@@ -70,8 +72,9 @@ class ContainerSeeder extends Seeder
             ];
         }
 
+        // Bulk insert without model events (seed throughput).
         foreach (array_chunk($rows, 20) as $chunk) {
-            DB::table('containers')->insert($chunk);
+            Container::insert($chunk);
         }
     }
 }

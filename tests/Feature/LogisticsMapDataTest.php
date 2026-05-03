@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
@@ -45,14 +46,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_route_edges_and_vessel_positions_for_open_route_and_active_shipment(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Mapland',
             'iso_code' => 'ML',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Map Owner',
@@ -170,14 +169,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_route_edges_use_stored_sea_path_when_present(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandSea',
             'iso_code' => 'MS',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $origin = Port::query()->create([
             'name' => 'Sea Path A',
@@ -220,14 +217,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_vessel_position_marked_user_shipment_when_rental_belongs_to_actor(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Mapland2',
             'iso_code' => 'M2',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Map Owner 2',
@@ -332,14 +327,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_vessel_position_not_marked_user_shipment_for_completed_or_expired_user_rental(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandUserOff',
             'iso_code' => 'MUO',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',
@@ -442,14 +435,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_container_marker_snaps_to_destination_after_port_operations_complete(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Snapland',
             'iso_code' => 'SN',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Snap Owner',
@@ -552,14 +543,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_includes_imminent_start_excludes_far_future_and_expired_positions(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandFilter',
             'iso_code' => 'MF',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Filter Owner',
@@ -682,14 +671,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_includes_approved_or_scheduled_rentals_when_start_date_has_begun(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandStatusLag',
             'iso_code' => 'MSL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',
@@ -760,14 +747,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_includes_user_active_rental_even_when_ports_outside_whitelist(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandWhitelistBypass',
             'iso_code' => 'MWB',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',
@@ -839,14 +824,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_falls_back_to_time_interpolation_when_snapshot_missing(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandFallback',
             'iso_code' => 'MFB',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',
@@ -925,14 +908,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_container_position_matches_vessel_on_shipment_sea_leg_without_snapshot(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandSeaSync',
             'iso_code' => 'MSS',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Sync Owner',
@@ -1040,14 +1021,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_idle_vessel_is_not_returned_on_user_only_map_endpoint_even_for_admin_role(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandIdle',
             'iso_code' => 'MI',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $port = Port::query()->create([
             'name' => 'Idle Port',
@@ -1081,14 +1060,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_scheduled_shipment_is_included_at_route_origin(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandSched',
             'iso_code' => 'MSD',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Sched Owner',
@@ -1199,14 +1176,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_same_vessel_dedup_prefers_in_transit_over_scheduled(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandDedup',
             'iso_code' => 'MD',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Dedup Owner',
@@ -1329,14 +1304,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_rental_cargo_count_sums_multiple_items_on_same_shipment(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandMulti',
             'iso_code' => 'MM',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Multi Owner',
@@ -1495,14 +1468,12 @@ class LogisticsMapDataTest extends TestCase
     {
         config(['logistics_map.port_names' => ['Port of Rotterdam']]);
 
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'WhitelistTestLand',
             'iso_code' => 'WL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         Port::query()->create([
             'name' => 'Port of Rotterdam',
@@ -1550,14 +1521,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_positions_include_rental_with_stale_updated_at_when_many_active_rentals_exist(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandManyRentals',
             'iso_code' => 'MMR',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Many Owner',
@@ -1665,14 +1634,12 @@ class LogisticsMapDataTest extends TestCase
 
     public function test_map_position_resolves_ports_from_route_when_rental_port_ids_null(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'MaplandRoutePorts',
             'iso_code' => 'MRP',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'RP Owner',

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Rental;
+use App\Models\Transaction;
 use App\Support\FinanceStatusGroups;
 use Carbon\Carbon;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -34,7 +36,7 @@ class FinanceMonitoringController extends Controller
 
         $userId = (int) $request->user()->id;
 
-        $baseQuery = DB::table('transactions')
+        $baseQuery = Transaction::query()
             ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
             ->where('rentals.user_id', $userId);
 
@@ -66,7 +68,7 @@ class FinanceMonitoringController extends Controller
             ])
             ->all();
 
-        $rentalsByStatus = DB::table('rentals')
+        $rentalsByStatus = Rental::query()
             ->where('rentals.user_id', $userId)
             ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
             ->groupBy('status')
@@ -80,7 +82,7 @@ class FinanceMonitoringController extends Controller
             ])
             ->all();
 
-        $rentalsByPaymentStatus = DB::table('rentals')
+        $rentalsByPaymentStatus = Rental::query()
             ->where('rentals.user_id', $userId)
             ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
             ->groupBy('payment_status')
@@ -97,7 +99,7 @@ class FinanceMonitoringController extends Controller
         $rejectedApproval = [
             'count' => (int) ($rentalsByPaymentStatus['rejected_by_approval']['count'] ?? 0),
             'lostRevenuePriceSum' => (float) ($rentalsByPaymentStatus['rejected_by_approval']['price_sum'] ?? 0),
-            'txAmountSum' => (float) DB::table('transactions')
+            'txAmountSum' => (float) Transaction::query()
                 ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
                 ->where('rentals.user_id', $userId)
                 ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
@@ -125,7 +127,7 @@ class FinanceMonitoringController extends Controller
             ->withQueryString();
 
         $syntheticLedgerPrefix = (string) config('finance.ledger.external_id_prefix', 'ledger:rental:');
-        $syntheticRejectedTransactions = DB::table('rentals')
+        $syntheticRejectedTransactions = Rental::query()
             ->where('rentals.user_id', $userId)
             ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
             ->whereNotExists(function ($q) {
@@ -161,7 +163,7 @@ class FinanceMonitoringController extends Controller
             ->values()
             ->all();
 
-        $syntheticPendingApprovalTransactions = DB::table('rentals')
+        $syntheticPendingApprovalTransactions = Rental::query()
             ->where('rentals.user_id', $userId)
             ->whereRaw('LOWER(rentals.status) = ?', ['pending_approval'])
             ->whereNotExists(function ($q) {

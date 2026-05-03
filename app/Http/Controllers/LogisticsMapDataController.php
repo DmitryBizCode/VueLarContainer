@@ -7,11 +7,11 @@ use App\Models\Port;
 use App\Models\Rental;
 use App\Models\Route as ShippingRoute;
 use App\Models\Shipment;
+use App\Models\ShipmentItem;
 use App\Services\LogisticsMapGeometryService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class LogisticsMapDataController extends Controller
 {
@@ -134,7 +134,7 @@ class LogisticsMapDataController extends Controller
         $rentalIds = $rentals->pluck('id')->map(fn ($v) => (int) $v)->values()->all();
         $latestShipmentByRentalId = $rentalIds === []
             ? []
-            : DB::table('shipment_items')
+            : ShipmentItem::query()
                 ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
                 ->whereIn('shipment_items.rental_id', $rentalIds)
                 ->orderByDesc('shipments.updated_at')

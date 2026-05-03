@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Models\User;
 use App\Models\Vessel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RentalStoreLogisticsTest extends TestCase
@@ -18,14 +18,12 @@ class RentalStoreLogisticsTest extends TestCase
 
     public function test_store_rejects_end_date_before_minimum_span(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Spanland',
             'iso_code' => 'SP',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Span Owner',
@@ -115,14 +113,12 @@ class RentalStoreLogisticsTest extends TestCase
 
     public function test_store_accepts_all_delivery_modes(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'DeliveryLand',
             'iso_code' => 'DL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'DM Owner',
@@ -216,14 +212,12 @@ class RentalStoreLogisticsTest extends TestCase
 
     public function test_store_accepts_balanced_routing_priority(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Balanceland',
             'iso_code' => 'BL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Bal Owner',

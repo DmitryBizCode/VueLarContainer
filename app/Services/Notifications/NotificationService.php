@@ -7,7 +7,6 @@ use App\Models\Inquiry;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserMessage;
-use App\Services\Telegram\TelegramBotClient;
 use App\Services\Telegram\TelegramNotificationService;
 use Illuminate\Mail\Mailable;
 
@@ -105,14 +104,13 @@ class NotificationService
         if (! config('notifications.telegram_enabled', false)) {
             return;
         }
-        if (! $user->telegram_chat_id) {
+        if (! $user->activeTelegramLinks()->exists()) {
             return;
         }
         if (! $user->notification_telegram_enabled) {
             return;
         }
 
-        $client = TelegramBotClient::fromConfig();
-        (new TelegramNotificationService($client))->sendForNotification($user, $row);
+        app(TelegramNotificationService::class)->sendForNotification($user, $row);
     }
 }

@@ -3,13 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use App\Models\Container;
+use App\Models\Owner;
+use App\Models\Port;
 use App\Models\Rental;
 use App\Models\RequestLog;
+use App\Models\Route;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Vessel;
 use App\Support\FinanceStatusGroups;
 use App\Support\PathLabelHelper;
 use App\Support\RequestContextHelper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,31 +27,31 @@ class AdminDashboardController extends Controller
     {
         $txGroups = FinanceStatusGroups::transactionGroups();
 
-        $rentalsByStatus = DB::table('rentals')
+        $rentalsByStatus = Rental::query()
             ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->all();
 
-        $containersTotal = DB::table('containers')->count();
-        $containersByStatus = DB::table('containers')
+        $containersTotal = Container::query()->withTrashed()->count();
+        $containersByStatus = Container::query()->withTrashed()
             ->selectRaw('current_status, COUNT(*) as count')
             ->groupBy('current_status')
             ->pluck('count', 'current_status')
             ->all();
 
-        $routesCount = DB::table('routes')->count();
-        $portsCount = DB::table('ports')->count();
-        $vesselsCount = DB::table('vessels')->count();
-        $ownersCount = DB::table('owners')->count();
-        $usersTotal = DB::table('users')->count();
-        $usersByRole = DB::table('users')
+        $routesCount = Route::query()->withTrashed()->count();
+        $portsCount = Port::query()->withTrashed()->count();
+        $vesselsCount = Vessel::query()->withTrashed()->count();
+        $ownersCount = Owner::query()->withTrashed()->count();
+        $usersTotal = User::query()->withTrashed()->count();
+        $usersByRole = User::query()->withTrashed()
             ->selectRaw('role, COUNT(*) as count')
             ->groupBy('role')
             ->pluck('count', 'role')
             ->all();
 
-        $transactionsByStatus = DB::table('transactions')
+        $transactionsByStatus = Transaction::query()
             ->selectRaw('LOWER(COALESCE(status, \'unknown\')) as status, COUNT(*) as count, COALESCE(SUM(amount), 0) as amount_sum')
             ->groupBy('status')
             ->orderBy('status')
@@ -77,7 +84,7 @@ class AdminDashboardController extends Controller
         }
         $totalTransactions = array_sum(array_map(fn ($r) => (int) ($r['count'] ?? 0), $transactionsByStatus));
 
-        $syntheticPendingApproval = DB::table('rentals')
+        $syntheticPendingApproval = Rental::query()
             ->whereRaw('LOWER(status) = ?', ['pending_approval'])
             ->whereNotExists(function ($q) {
                 $q->selectRaw('1')
@@ -87,7 +94,7 @@ class AdminDashboardController extends Controller
         $syntheticPendingApprovalAmount = (float) $syntheticPendingApproval->sum('price');
         $syntheticPendingApprovalCount = (int) $syntheticPendingApproval->count();
 
-        $rentalsByPaymentStatus = DB::table('rentals')
+        $rentalsByPaymentStatus = Rental::query()
             ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
             ->groupBy('payment_status')
             ->orderBy('payment_status')
@@ -103,16 +110,16 @@ class AdminDashboardController extends Controller
         $rejectedApproval = [
             'count' => (int) ($rentalsByPaymentStatus['rejected_by_approval']['count'] ?? 0),
             'lostRevenuePriceSum' => (float) ($rentalsByPaymentStatus['rejected_by_approval']['price_sum'] ?? 0),
-            'txAmountSum' => (float) DB::table('transactions')
+            'txAmountSum' => (float) Transaction::query()
                 ->join('rentals', 'rentals.id', '=', 'transactions.rental_id')
                 ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
                 ->sum('transactions.amount'),
         ];
 
-        $activityLogsToday = DB::table('activity_logs')
+        $activityLogsToday = ActivityLog::query()
             ->whereDate('created_at', today())
             ->count();
-        $activityLogsTotal = DB::table('activity_logs')->count();
+        $activityLogsTotal = ActivityLog::query()->count();
 
         $requestLogsToday = 0;
         $requestLogsTotal = 0;

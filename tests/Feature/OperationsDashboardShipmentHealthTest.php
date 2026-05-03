@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
@@ -22,14 +23,12 @@ class OperationsDashboardShipmentHealthTest extends TestCase
 
     private function seedBase(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'ShipLand',
             'iso_code' => 'SL',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Owner',

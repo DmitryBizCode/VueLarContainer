@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
@@ -10,7 +11,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\RentalLedgerTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class FinanceLedgerTransactionTest extends TestCase
@@ -19,14 +19,12 @@ class FinanceLedgerTransactionTest extends TestCase
 
     private function seedRentalEligibleForPaymentApproval(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Ledgerland',
             'iso_code' => 'LG',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Ledger Owner',

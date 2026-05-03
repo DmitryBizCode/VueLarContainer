@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UpdateNotificationChannelsRequest;
 use App\Models\Country;
+use App\Models\UserTelegramLink;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -55,8 +56,24 @@ class ProfileController extends Controller
                 'countryName' => $user->country?->name,
             ],
             'telegram' => [
-                'linked' => ! is_null($user->telegram_chat_id),
-                'chat_id' => $user->telegram_chat_id,
+                'linked' => $user->activeTelegramLinks()->exists(),
+                'links' => $user->telegramLinks()
+                    ->orderByDesc('linked_at')
+                    ->get()
+                    ->map(static function (UserTelegramLink $link) {
+                        $chat = (string) $link->telegram_chat_id;
+                        $masked = strlen($chat) <= 4 ? str_repeat('•', strlen($chat)) : '…'.substr($chat, -4);
+
+                        return [
+                            'id' => $link->id,
+                            'masked_chat' => $masked,
+                            'username' => $link->telegram_username,
+                            'display_name' => trim(implode(' ', array_filter([$link->first_name, $link->last_name]))),
+                            'linked_at' => $link->linked_at?->toIso8601String(),
+                            'status' => $link->status,
+                        ];
+                    })
+                    ->values(),
                 'bot_username' => (string) config('services.telegram.bot_username', ''),
             ],
             'notificationChannels' => [

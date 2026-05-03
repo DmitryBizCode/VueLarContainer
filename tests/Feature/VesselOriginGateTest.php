@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class VesselOriginGateTest extends TestCase
@@ -19,14 +19,12 @@ class VesselOriginGateTest extends TestCase
     {
         config(['logistics.require_vessel_at_origin' => true]);
 
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Gateland',
             'iso_code' => 'GT',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Gate Owner',

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Container;
+use App\Models\ContainerSensor;
 use App\Models\SensorType;
-use Illuminate\Support\Facades\DB;
 
 class ContainerSensorSyncService
 {
@@ -21,31 +21,28 @@ class ContainerSensorSyncService
         }
 
         $sensorTypes = SensorType::query()->orderBy('sort_order')->get();
-        $now = now();
 
         foreach ($sensorTypes as $st) {
             $enabled = $st->is_optional
                 ? in_array((int) $st->id, $optionalEnabledTypeIds, true)
                 : true;
 
-            $exists = DB::table('container_sensors')
+            $row = ContainerSensor::query()
                 ->where('container_id', $container->id)
                 ->where('sensor_type_id', $st->id)
-                ->exists();
+                ->first();
 
-            if ($exists) {
-                DB::table('container_sensors')
-                    ->where('container_id', $container->id)
-                    ->where('sensor_type_id', $st->id)
-                    ->update(['enabled' => $enabled, 'sort_order' => $st->sort_order, 'updated_at' => $now]);
+            if ($row !== null) {
+                $row->update([
+                    'enabled' => $enabled,
+                    'sort_order' => $st->sort_order,
+                ]);
             } else {
-                DB::table('container_sensors')->insert([
+                ContainerSensor::query()->create([
                     'container_id' => $container->id,
                     'sensor_type_id' => $st->id,
                     'enabled' => $enabled,
                     'sort_order' => $st->sort_order,
-                    'created_at' => $now,
-                    'updated_at' => $now,
                 ]);
             }
         }

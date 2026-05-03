@@ -74,7 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/profile/notification-channels', [ProfileController::class, 'updateNotificationChannels'])
             ->name('profile.notification-channels.update');
         Route::post('/telegram/link-code', [TelegramLinkController::class, 'createLinkCode'])->name('telegram.link-code');
-        Route::post('/telegram/unlink', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
+        Route::delete('/telegram/links/{link}', [TelegramLinkController::class, 'destroyLink'])->name('telegram.links.destroy');
 
         Route::get('/notifications', [UserNotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/unread-count', [UserNotificationController::class, 'unreadCount'])->name('notifications.unread-count');

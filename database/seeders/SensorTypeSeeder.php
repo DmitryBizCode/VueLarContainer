@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Container;
+use App\Models\ContainerSensor;
+use App\Models\SensorType;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class SensorTypeSeeder extends Seeder
 {
@@ -28,33 +29,29 @@ class SensorTypeSeeder extends Seeder
             ['slug' => 'pressure_hpa', 'name' => 'Тиск', 'category' => 'environment', 'is_optional' => true, 'telemetry_keys' => ['pressure_hpa'], 'sort_order' => 90],
         ];
 
-        $now = now();
-
         foreach ($types as $row) {
-            DB::table('sensor_types')->updateOrInsert(
+            SensorType::query()->updateOrCreate(
                 ['slug' => $row['slug']],
-                array_merge($row, [
-                    'telemetry_keys' => json_encode($row['telemetry_keys']),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ])
+                [
+                    'name' => $row['name'],
+                    'category' => $row['category'],
+                    'is_optional' => $row['is_optional'],
+                    'telemetry_keys' => $row['telemetry_keys'],
+                    'sort_order' => $row['sort_order'],
+                ]
             );
         }
     }
 
     protected function syncContainerSensorsForIotContainers(): void
     {
-        if (! Schema::hasTable('container_sensors') || ! Schema::hasTable('containers')) {
-            return;
-        }
-
-        $sensorTypes = DB::table('sensor_types')->orderBy('sort_order')->get(['id', 'sort_order']);
-        $containerIds = DB::table('containers')->where('iot_active', true)->whereNull('deleted_at')->pluck('id');
+        $sensorTypes = SensorType::query()->orderBy('sort_order')->get(['id', 'sort_order']);
+        $containerIds = Container::query()->where('iot_active', true)->whereNull('deleted_at')->pluck('id');
         $now = now();
 
         foreach ($containerIds as $containerId) {
             foreach ($sensorTypes as $st) {
-                DB::table('container_sensors')->insertOrIgnore([
+                ContainerSensor::query()->insertOrIgnore([
                     'container_id' => $containerId,
                     'sensor_type_id' => $st->id,
                     'enabled' => true,

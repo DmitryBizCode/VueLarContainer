@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Country;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -19,14 +19,11 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
-        $now = now();
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Ukraine',
             'iso_code' => 'UA',
             'interest_tax' => 20.00,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+        ])->id;
 
         $response = $this->post('/register', [
             'first_name' => 'Test',

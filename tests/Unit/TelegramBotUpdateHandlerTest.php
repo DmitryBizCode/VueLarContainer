@@ -3,8 +3,11 @@
 namespace Tests\Unit;
 
 use App\Models\User;
+use App\Models\UserTelegramLink;
+use App\Services\Telegram\TelegramAccountLinkService;
 use App\Services\Telegram\TelegramBotClient;
 use App\Services\Telegram\TelegramBotUpdateHandler;
+use App\Services\Telegram\TelegramLinkCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -24,95 +27,97 @@ class TelegramBotUpdateHandlerTest extends TestCase
 
     private function makeHandler(): TelegramBotUpdateHandler
     {
-        return new TelegramBotUpdateHandler(new TelegramBotClient('test-token', 10));
+        return new TelegramBotUpdateHandler(
+            new TelegramBotClient('test-token', 10),
+            app(TelegramAccountLinkService::class),
+        );
     }
 
     public function test_plain_code_links_account(): void
     {
-        $user = User::factory()->create([
-            'telegram_link_code' => 'LINKCODE1',
-            'telegram_link_code_expires_at' => now()->addHour(),
-        ]);
+        $user = User::factory()->create();
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($user)['plain'];
 
-        $this->makeHandler()->handleIncomingText(424242, 'linkcode1');
+        $this->makeHandler()->handleIncomingText(424242, $plain, ['id' => 1, 'username' => 'u']);
 
-        $user->refresh();
-        $this->assertSame(424242, (int) $user->telegram_chat_id);
-        $this->assertNull($user->telegram_link_code);
+        $link = UserTelegramLink::query()->where('user_id', $user->id)->first();
+        $this->assertNotNull($link);
+        $this->assertSame(424242, (int) $link->telegram_chat_id);
+        $this->assertNotNull(
+            \App\Models\TelegramLinkCode::query()
+                ->where('user_id', $user->id)
+                ->whereNotNull('consumed_at')
+                ->first()
+        );
 
         Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage'));
     }
 
     public function test_start_with_payload_links(): void
     {
-        $user = User::factory()->create([
-            'telegram_link_code' => 'STARTIT9',
-            'telegram_link_code_expires_at' => now()->addHour(),
-        ]);
+        $user = User::factory()->create();
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($user)['plain'];
 
-        $this->makeHandler()->handleIncomingText(1001, '/start STARTIT9');
+        $this->makeHandler()->handleIncomingText(1001, '/start '.$plain, null);
 
-        $user->refresh();
-        $this->assertSame(1001, (int) $user->telegram_chat_id);
+        $this->assertSame(1001, (int) UserTelegramLink::query()->where('user_id', $user->id)->value('telegram_chat_id'));
     }
 
     public function test_link_command_links(): void
     {
-        $user = User::factory()->create([
-            'telegram_link_code' => 'CMDLINK1',
-            'telegram_link_code_expires_at' => now()->addHour(),
-        ]);
+        $user = User::factory()->create();
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($user)['plain'];
 
-        $this->makeHandler()->handleIncomingText(2002, '/link cmdlink1');
+        $this->makeHandler()->handleIncomingText(2002, '/link '.$plain, null);
 
-        $user->refresh();
-        $this->assertSame(2002, (int) $user->telegram_chat_id);
+        $this->assertSame(2002, (int) UserTelegramLink::query()->where('user_id', $user->id)->value('telegram_chat_id'));
     }
 
     public function test_connect_alias_links(): void
     {
-        $user = User::factory()->create([
-            'telegram_link_code' => 'ALIAS01',
-            'telegram_link_code_expires_at' => now()->addHour(),
-        ]);
+        $user = User::factory()->create();
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($user)['plain'];
 
-        $this->makeHandler()->handleIncomingText(3003, '/connect ALIAS01');
+        $this->makeHandler()->handleIncomingText(3003, '/connect '.$plain, null);
 
-        $user->refresh();
-        $this->assertSame(3003, (int) $user->telegram_chat_id);
+        $this->assertSame(3003, (int) UserTelegramLink::query()->where('user_id', $user->id)->value('telegram_chat_id'));
     }
 
     public function test_invalid_code_does_not_link(): void
     {
-        $user = User::factory()->create([
-            'telegram_link_code' => 'VALID001',
-            'telegram_link_code_expires_at' => now()->addHour(),
-        ]);
+        $user = User::factory()->create();
+        app(TelegramLinkCodeService::class)->issueForUser($user);
 
-        $this->makeHandler()->handleIncomingText(5005, 'NOTREAL1');
+        $this->makeHandler()->handleIncomingText(5005, 'NOTREALCODEHERE', null);
 
-        $user->refresh();
-        $this->assertNull($user->telegram_chat_id);
-        $this->assertSame('VALID001', $user->telegram_link_code);
+        $this->assertNull(UserTelegramLink::query()->where('user_id', $user->id)->first());
     }
 
-    public function test_unlink_clears_telegram_chat(): void
+    public function test_unlink_removes_link_row(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->create();
+        UserTelegramLink::query()->create([
+            'user_id' => $user->id,
             'telegram_chat_id' => 777001,
+            'status' => UserTelegramLink::STATUS_ACTIVE,
+            'linked_at' => now(),
         ]);
 
         $this->makeHandler()->handleIncomingText(777001, '/unlink');
 
-        $user->refresh();
-        $this->assertNull($user->telegram_chat_id);
+        $this->assertNull(UserTelegramLink::query()->where('telegram_chat_id', 777001)->first());
     }
 
     public function test_status_shows_linked_when_chat_matches(): void
     {
-        User::factory()->create([
-            'telegram_chat_id' => 888002,
+        $user = User::factory()->create([
             'notification_telegram_enabled' => true,
+        ]);
+        UserTelegramLink::query()->create([
+            'user_id' => $user->id,
+            'telegram_chat_id' => 888002,
+            'status' => UserTelegramLink::STATUS_ACTIVE,
+            'linked_at' => now(),
         ]);
 
         $this->makeHandler()->handleIncomingText(888002, '/status');
@@ -124,7 +129,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'Status') && str_contains($text, 'Linked');
+            return str_contains($text, 'Статус') && str_contains($text, 'Привязано');
         });
     }
 
@@ -139,13 +144,13 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'Not linked') || str_contains($text, 'linked yet');
+            return str_contains($text, 'привязано') || str_contains($text, 'Ещё не');
         });
     }
 
     public function test_keyboard_help_label_triggers_help(): void
     {
-        $this->makeHandler()->handleIncomingText(1, '📋 Help');
+        $this->makeHandler()->handleIncomingText(1, 'Помощь');
 
         Http::assertSent(function ($request) {
             if (! str_contains($request->url(), 'sendMessage')) {
@@ -154,7 +159,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, '/status') || str_contains($text, 'shortcuts');
+            return str_contains($text, '/status') && str_contains($text, '/link');
         });
     }
 
@@ -177,7 +182,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'shortcuts') || str_contains($text, '/status');
+            return str_contains($text, '/status') || str_contains($text, '/link');
         });
     }
 
@@ -196,7 +201,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
         });
     }
 
-    public function test_link_without_code_sends_usage(): void
+    public function test_link_without_code_prompts_for_code(): void
     {
         $this->makeHandler()->handleIncomingText(1, '/link');
 
@@ -207,27 +212,42 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, '/link') && str_contains($text, 'code');
+            return str_contains($text, 'код') || str_contains($text, 'Привязк');
         });
     }
 
-    public function test_reassigns_chat_when_linking_second_account(): void
+    public function test_telegram_cannot_be_rebound_to_another_site_user(): void
     {
         $first = User::factory()->create([
-            'telegram_chat_id' => 600600,
             'email' => 'first@example.com',
         ]);
-        $second = User::factory()->create([
-            'telegram_link_code' => 'SECOND1',
-            'telegram_link_code_expires_at' => now()->addHour(),
-            'email' => 'second@example.com',
+        UserTelegramLink::query()->create([
+            'user_id' => $first->id,
+            'telegram_chat_id' => 600600,
+            'status' => UserTelegramLink::STATUS_ACTIVE,
+            'linked_at' => now(),
         ]);
 
-        $this->makeHandler()->handleIncomingText(600600, 'SECOND1');
+        $second = User::factory()->create([
+            'email' => 'second@example.com',
+        ]);
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($second)['plain'];
 
-        $first->refresh();
-        $second->refresh();
-        $this->assertNull($first->telegram_chat_id);
-        $this->assertSame(600600, (int) $second->telegram_chat_id);
+        $this->makeHandler()->handleIncomingText(600600, $plain, null);
+
+        $this->assertSame($first->id, (int) UserTelegramLink::query()->where('telegram_chat_id', 600600)->value('user_id'));
+        $this->assertNull(UserTelegramLink::query()->where('user_id', $second->id)->first());
+    }
+
+    public function test_code_cannot_be_reused(): void
+    {
+        $user = User::factory()->create();
+        $plain = app(TelegramLinkCodeService::class)->issueForUser($user)['plain'];
+
+        $this->makeHandler()->handleIncomingText(111, $plain, null);
+        $this->makeHandler()->handleIncomingText(222, $plain, null);
+
+        $this->assertSame(111, (int) UserTelegramLink::query()->where('user_id', $user->id)->value('telegram_chat_id'));
+        $this->assertNull(UserTelegramLink::query()->where('telegram_chat_id', 222)->first());
     }
 }

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Port;
+use App\Models\Rental;
 use App\Models\Route;
+use App\Models\Shipment;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class RoutesBuildSeaPathCommand extends Command
@@ -205,8 +206,8 @@ class RoutesBuildSeaPathCommand extends Command
             return;
         }
 
-        $usedByShipment = DB::table('shipments')->where('route_id', $routeId)->exists();
-        $usedByRental = DB::table('rentals')->where('route_id', $routeId)->exists();
+        $usedByShipment = Shipment::query()->where('route_id', $routeId)->exists();
+        $usedByRental = Rental::query()->where('route_id', $routeId)->exists();
         if ($usedByShipment || $usedByRental) {
             return;
         }

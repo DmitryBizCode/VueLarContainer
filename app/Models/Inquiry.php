@@ -65,7 +65,6 @@ class Inquiry extends Model
         'subject',
         'message',
         'source',
-        'status',
         'handling_status',
         'admin_notes',
         'converted_user_id',

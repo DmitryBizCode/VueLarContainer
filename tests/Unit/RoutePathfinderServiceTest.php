@@ -2,10 +2,11 @@
 
 namespace Tests\Unit;
 
+use App\Models\Country;
+use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Services\RoutePathfinderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RoutePathfinderServiceTest extends TestCase
@@ -14,24 +15,20 @@ class RoutePathfinderServiceTest extends TestCase
 
     public function test_prefers_multi_hop_for_time_when_direct_is_slower(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Pathland',
             'iso_code' => 'PH',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $ports = [];
         foreach (['A', 'B', 'C'] as $label) {
-            $ports[$label] = DB::table('ports')->insertGetId([
+            $ports[$label] = Port::factory()->create([
                 'country_id' => $countryId,
                 'name' => "Port {$label}",
                 'city' => $label,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            ])->id;
         }
 
         ShippingRoute::query()->create([
@@ -67,24 +64,20 @@ class RoutePathfinderServiceTest extends TestCase
 
     public function test_prefers_direct_for_cost_when_cheaper_than_two_hops(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Costland',
             'iso_code' => 'CS',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $ports = [];
         foreach (['X', 'Y', 'Z'] as $label) {
-            $ports[$label] = DB::table('ports')->insertGetId([
+            $ports[$label] = Port::factory()->create([
                 'country_id' => $countryId,
                 'name' => "Harbor {$label}",
                 'city' => $label,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            ])->id;
         }
 
         ShippingRoute::query()->create([

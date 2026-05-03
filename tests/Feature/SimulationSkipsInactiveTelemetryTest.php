@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Metric;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SimulationSkipsInactiveTelemetryTest extends TestCase
@@ -18,14 +18,12 @@ class SimulationSkipsInactiveTelemetryTest extends TestCase
 
     protected function seedIotRental(bool $telemetryActive): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Sleepland '.uniqid(),
             'iso_code' => 'S'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT),
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Sleep Owner',
             'email' => 'sleep-owner-'.uniqid().'@test.local',

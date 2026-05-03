@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Route as ShippingRoute;
 use App\Models\User;
 use App\Models\Vessel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RentalRequestPreviewTest extends TestCase
@@ -18,14 +18,12 @@ class RentalRequestPreviewTest extends TestCase
 
     public function test_preview_returns_price_without_container_id_when_containers_exist(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Previewland',
             'iso_code' => 'PV',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Preview Owner',
@@ -123,14 +121,12 @@ class RentalRequestPreviewTest extends TestCase
 
     public function test_preview_blocks_indirect_route_when_transfer_port_has_no_vessel(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Feasland',
             'iso_code' => 'FS',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Feas Owner',
@@ -222,14 +218,12 @@ class RentalRequestPreviewTest extends TestCase
 
     public function test_preview_includes_route_plan_and_increases_min_span_when_proxy_waiting_exists(): void
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Waitland',
             'iso_code' => 'WT',
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
 
         $owner = Owner::query()->create([
             'name' => 'Wait Owner',

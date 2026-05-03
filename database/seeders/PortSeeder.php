@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Country;
+use App\Models\Port;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class PortSeeder extends Seeder
 {
@@ -91,31 +92,21 @@ class PortSeeder extends Seeder
 
     public function run(): void
     {
-        $now = now();
-
         foreach ($this->portDefinitions() as $def) {
-            $countryId = DB::table('countries')->where('iso_code', $def['iso'])->value('id');
+            $countryId = Country::query()->where('iso_code', $def['iso'])->value('id');
             if ($countryId === null) {
                 continue;
             }
 
-            $existing = DB::table('ports')->where('name', $def['name'])->first();
-            $payload = [
-                'country_id' => $countryId,
-                'city' => $def['city'],
-                'latitude' => $def['lat'],
-                'longitude' => $def['lng'],
-                'updated_at' => $now,
-            ];
-
-            if ($existing) {
-                DB::table('ports')->where('id', $existing->id)->update($payload);
-            } else {
-                DB::table('ports')->insert(array_merge($payload, [
-                    'name' => $def['name'],
-                    'created_at' => $now,
-                ]));
-            }
+            Port::updateOrCreate(
+                ['name' => $def['name']],
+                [
+                    'country_id' => $countryId,
+                    'city' => $def['city'],
+                    'latitude' => $def['lat'],
+                    'longitude' => $def['lng'],
+                ]
+            );
         }
     }
 }

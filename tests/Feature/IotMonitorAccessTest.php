@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -21,14 +21,12 @@ class IotMonitorAccessTest extends TestCase
      */
     private function createPendingRentalForUser(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'IotGate '.uniqid(),
             'iso_code' => 'I'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT),
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Gate Owner',
             'email' => 'gate-owner-'.uniqid().'@test.local',

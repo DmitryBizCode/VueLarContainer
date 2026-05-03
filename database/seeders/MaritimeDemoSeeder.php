@@ -2,8 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Models\Container;
+use App\Models\Port;
+use App\Models\Rental;
+use App\Models\Route;
+use App\Models\Shipment;
+use App\Models\ShipmentItem;
+use App\Models\User;
+use App\Models\Vessel;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -13,38 +20,38 @@ class MaritimeDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        if (DB::table('rentals')->where('description', 'like', '%[demo-seed]%')->exists()) {
+        if (Rental::query()->where('description', 'like', '%[demo-seed]%')->exists()) {
             return;
         }
 
-        $demoUserId = DB::table('users')->where('email', 'demo@example.com')->value('id');
-        $adminUserId = DB::table('users')->where('email', 'romeobackend@gmail.com')->value('id');
+        $demoUserId = User::query()->where('email', 'demo@example.com')->value('id');
+        $adminUserId = User::query()->where('email', 'romeobackend@gmail.com')->value('id');
 
         if (! $demoUserId) {
             return;
         }
 
-        $hamburgId = DB::table('ports')->where('name', 'Port of Hamburg')->value('id');
-        $rotterdamId = DB::table('ports')->where('name', 'Port of Rotterdam')->value('id');
-        $valenciaId = DB::table('ports')->where('name', 'Port of Valencia')->value('id');
+        $hamburgId = Port::query()->where('name', 'Port of Hamburg')->value('id');
+        $rotterdamId = Port::query()->where('name', 'Port of Rotterdam')->value('id');
+        $valenciaId = Port::query()->where('name', 'Port of Valencia')->value('id');
 
         if (! $hamburgId || ! $rotterdamId || ! $valenciaId) {
             return;
         }
 
-        $routeId = DB::table('routes')
+        $routeId = Route::query()
             ->where('origin_port_id', $hamburgId)
             ->where('destination_port_id', $rotterdamId)
             ->where('route_status', 'open')
             ->value('id');
 
-        $containerId = DB::table('containers')
+        $containerId = Container::query()
             ->where('current_port_id', $hamburgId)
             ->where('serial_number', 'like', 'VL-SEED-%')
             ->orderBy('id')
             ->value('id');
 
-        $vesselId = DB::table('vessels')
+        $vesselId = Vessel::query()
             ->where('current_port_id', $hamburgId)
             ->orderBy('id')
             ->value('id');
@@ -54,8 +61,7 @@ class MaritimeDemoSeeder extends Seeder
         }
 
         $now = now();
-        $cargo = json_encode(['electronics']);
-        $legs = json_encode([
+        $routeLegs = [
             [
                 'route_id' => (int) $routeId,
                 'origin_port_id' => (int) $hamburgId,
@@ -63,20 +69,19 @@ class MaritimeDemoSeeder extends Seeder
                 'estimated_days' => 2,
                 'distance' => 430.0,
             ],
-        ]);
-        $priceBreakdown = json_encode([
+        ];
+        $priceBreakdown = [
             'estimated_total' => 2850.5,
             'days' => 30,
-            'route_legs' => json_decode($legs, true),
+            'route_legs' => $routeLegs,
             'routing_mode' => 'time',
-        ]);
+        ];
 
-        DB::table('containers')->where('id', $containerId)->update([
+        Container::query()->whereKey($containerId)->update([
             'current_status' => 'in_use',
-            'updated_at' => $now,
         ]);
 
-        $rentalActiveId = DB::table('rentals')->insertGetId([
+        $rentalActive = Rental::query()->create([
             'user_id' => $demoUserId,
             'container_id' => $containerId,
             'route_id' => $routeId,
@@ -85,7 +90,7 @@ class MaritimeDemoSeeder extends Seeder
             'start_date' => $now->copy()->subDays(4),
             'end_date' => $now->copy()->addDays(26),
             'rental_days' => 30,
-            'cargo_types' => $cargo,
+            'cargo_types' => ['electronics'],
             'cargo_details' => 'Seeded demo cargo [demo-seed]',
             'priority' => 'normal',
             'routing_priority' => null,
@@ -109,15 +114,13 @@ class MaritimeDemoSeeder extends Seeder
             'reviewed_by' => $adminUserId,
             'reviewed_at' => $now,
             'description' => 'Auto-seeded active leg Hamburg → Rotterdam [demo-seed]',
-            'created_at' => $now,
-            'updated_at' => $now,
         ]);
 
         if ($vesselId) {
             $tracking = $this->uniqueTracking();
             $dep = $now->copy()->subDays(2);
             $arr = $dep->copy()->addDays(2);
-            $shipmentId = DB::table('shipments')->insertGetId([
+            $shipment = Shipment::query()->create([
                 'vessel_id' => $vesselId,
                 'route_id' => $routeId,
                 'leg_sequence' => 1,
@@ -128,23 +131,19 @@ class MaritimeDemoSeeder extends Seeder
                 'port_operations_until' => null,
                 'tracking_number' => $tracking,
                 'status' => 'in_transit',
-                'created_at' => $now,
-                'updated_at' => $now,
             ]);
 
-            DB::table('shipment_items')->insert([
-                'shipment_id' => $shipmentId,
+            ShipmentItem::query()->create([
+                'shipment_id' => $shipment->id,
                 'container_id' => $containerId,
-                'rental_id' => $rentalActiveId,
+                'rental_id' => $rentalActive->id,
                 'loaded_at' => $dep,
                 'condition_on_arrival' => 'good',
                 'notes' => 'Seeded with MaritimeDemoSeeder',
-                'created_at' => $now,
-                'updated_at' => $now,
             ]);
         }
 
-        $containerPending = DB::table('containers')
+        $containerPending = Container::query()
             ->where('current_port_id', $rotterdamId)
             ->where('serial_number', 'like', 'VL-SEED-%')
             ->where('id', '!=', $containerId)
@@ -152,7 +151,7 @@ class MaritimeDemoSeeder extends Seeder
             ->value('id');
 
         if ($containerPending) {
-            DB::table('rentals')->insert([
+            Rental::query()->create([
                 'user_id' => $demoUserId,
                 'container_id' => $containerPending,
                 'route_id' => $routeId,
@@ -161,7 +160,7 @@ class MaritimeDemoSeeder extends Seeder
                 'start_date' => $now->copy()->addDays(7),
                 'end_date' => $now->copy()->addDays(40),
                 'rental_days' => 33,
-                'cargo_types' => $cargo,
+                'cargo_types' => ['electronics'],
                 'cargo_details' => null,
                 'priority' => 'urgent',
                 'routing_priority' => 'speed',
@@ -178,15 +177,13 @@ class MaritimeDemoSeeder extends Seeder
                 'terms_accepted' => true,
                 'estimated_distance' => 1100.0,
                 'price' => 4100.0,
-                'price_breakdown' => json_encode(['estimated_total' => 4100.0, 'days' => 33, 'route_legs' => [], 'routing_mode' => 'time']),
+                'price_breakdown' => ['estimated_total' => 4100.0, 'days' => 33, 'route_legs' => [], 'routing_mode' => 'time'],
                 'status' => 'pending_approval',
                 'is_telemetry_active' => true,
                 'payment_status' => 'pending',
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'description' => 'Seeded pending approval Rotterdam → Valencia [demo-seed]',
-                'created_at' => $now,
-                'updated_at' => $now,
             ]);
         }
     }
@@ -195,7 +192,7 @@ class MaritimeDemoSeeder extends Seeder
     {
         do {
             $t = 'DEMO-'.strtoupper(Str::random(10));
-        } while (DB::table('shipments')->where('tracking_number', $t)->exists());
+        } while (Shipment::query()->where('tracking_number', $t)->exists());
 
         return $t;
     }

@@ -29,7 +29,6 @@ class InquiryController extends Controller
                 'subject' => $validated['subject'],
                 'message' => $validated['message'],
                 'source' => 'website',
-                'status' => 'new',
                 'handling_status' => Inquiry::HANDLING_NEW,
                 'submitted_by_user_id' => $request->user()?->id,
             ]);

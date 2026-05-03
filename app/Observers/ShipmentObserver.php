@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
+use App\Models\Container;
 use App\Models\Route as ShippingRoute;
 use App\Models\Shipment;
+use App\Models\ShipmentItem;
 use App\Models\Vessel;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -52,7 +54,7 @@ class ShipmentObserver
 
             // Once a shipment arrives, its containers are considered physically in the destination port.
             // We snap container location to destination for realism; map will still show in-transit route until arrival.
-            $containerIds = DB::table('shipment_items')
+            $containerIds = ShipmentItem::query()
                 ->where('shipment_id', $shipment->id)
                 ->pluck('container_id')
                 ->filter()
@@ -61,7 +63,7 @@ class ShipmentObserver
                 ->all();
 
             if ($containerIds !== []) {
-                DB::table('containers')
+                Container::query()
                     ->whereIn('id', $containerIds)
                     ->update([
                         'current_port_id' => $route->destination_port_id,

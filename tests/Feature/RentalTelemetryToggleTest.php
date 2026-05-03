@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Container;
+use App\Models\Country;
 use App\Models\Owner;
 use App\Models\Port;
 use App\Models\Rental;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -21,14 +21,12 @@ class RentalTelemetryToggleTest extends TestCase
      */
     protected function createActiveIotRental(): array
     {
-        $countryId = DB::table('countries')->insertGetId([
+        $countryId = Country::factory()->create([
             'name' => 'Toggleland '.uniqid(),
             'iso_code' => 'G'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT),
             'phone_code' => '+0',
             'interest_tax' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
         $owner = Owner::query()->create([
             'name' => 'Toggle Owner',
             'email' => 'toggle-owner-'.uniqid().'@test.local',

@@ -26,6 +26,9 @@ services:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     networks:
       - laravel
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - PHP_OPCACHE_ENABLE=${PHP_OPCACHE_ENABLE:-1}
       - PHP_OPCACHE_MEMORY_CONSUMPTION=${PHP_OPCACHE_MEMORY_CONSUMPTION:-128}
@@ -48,13 +51,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - laravel
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
 
   pgadmin:
     image: dpage/pgadmin4:9.2
     container_name: ${APP_NAME:-laravel}_pgadmin
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     environment:
@@ -109,8 +119,10 @@ services:
     networks:
       - laravel
     depends_on:
-      - php
-      - postgres
+      php:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
 
@@ -151,8 +163,10 @@ services:
     networks:
       - laravel
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
 
@@ -169,7 +183,8 @@ services:
     networks:
       - laravel
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
 

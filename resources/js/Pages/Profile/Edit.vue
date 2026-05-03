@@ -45,7 +45,7 @@ const props = defineProps({
         type: Object,
         default: () => ({
             linked: false,
-            chat_id: null,
+            links: [],
             bot_username: '',
         }),
     },
@@ -140,13 +140,13 @@ const generateTelegramCode = async () => {
     }
 };
 
-const unlinkTelegram = async () => {
+const unlinkTelegramLink = async (linkId) => {
     try {
-        await axios.post(route('telegram.unlink'));
-        toastSuccess('Telegram unlinked');
-        window.location.reload();
+        await axios.delete(route('telegram.links.destroy', { link: linkId }));
+        toastSuccess('Telegram connection removed');
+        router.reload({ preserveScroll: true });
     } catch {
-        toastError('Failed to unlink');
+        toastError('Failed to remove connection');
     }
 };
 
@@ -447,10 +447,11 @@ const saveNotificationChannels = () => {
                                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Telegram account</p>
                                         <h3 class="text-xl font-bold text-slate-900">Connect Telegram bot</h3>
                                         <p class="text-sm text-slate-600">
-                                            Generate a code here, then paste it in the bot or use
-                                            <span class="font-semibold text-slate-800">Open in Telegram</span> when configured. Turn on
-                                            <span class="font-semibold text-slate-800">Telegram</span> above for pushes. The bot shows button rows and a
-                                            <span class="font-semibold text-slate-800">Menu</span> (↔) with commands while the server worker is running.
+                                            Generate a one-time code for each colleague or device. Paste it in the bot (or use
+                                            <span class="font-semibold text-slate-800">Open in Telegram</span>). Turn on
+                                            <span class="font-semibold text-slate-800">Telegram</span> above for pushes. The bot uses button rows and the
+                                            <span class="font-semibold text-slate-800">Menu</span> (↔) while the
+                                            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px]">telegram:poll</code> worker runs.
                                         </p>
                                     </div>
                                     <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
@@ -459,7 +460,7 @@ const saveNotificationChannels = () => {
                                             class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800"
                                         >
                                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                            Linked
+                                            {{ (telegram.links?.length || 0) === 1 ? '1 device' : `${telegram.links?.length || 0} devices` }}
                                         </span>
                                         <span
                                             v-else
@@ -504,7 +505,7 @@ const saveNotificationChannels = () => {
                                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200/80 text-sm font-bold text-slate-800"
                                             >2</span
                                         >
-                                        <span class="text-xs font-medium leading-snug text-slate-700">Open the bot, tap Start, or paste the code</span>
+                                        <span class="text-xs font-medium leading-snug text-slate-700">Open the bot, tap «Привязать аккаунт» or paste the code</span>
                                     </li>
                                     <li
                                         class="flex gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-300"
@@ -544,6 +545,36 @@ const saveNotificationChannels = () => {
                                     </p>
                                 </div>
 
+                                <div v-if="telegram.linked && (telegram.links?.length || 0) > 0" class="mt-6 space-y-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Connected Telegram chats</p>
+                                    <ul class="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
+                                        <li
+                                            v-for="link in telegram.links"
+                                            :key="link.id"
+                                            class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                        >
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-semibold text-slate-900">
+                                                    <span v-if="link.username" class="text-sky-800">@{{ link.username }}</span>
+                                                    <span v-else class="font-mono text-slate-800">{{ link.masked_chat }}</span>
+                                                    <span v-if="link.display_name" class="ml-2 font-normal text-slate-600">· {{ link.display_name }}</span>
+                                                </p>
+                                                <p class="mt-0.5 text-xs text-slate-500">
+                                                    Linked {{ formatDate(link.linked_at) }}
+                                                    <span v-if="link.status !== 'active'" class="ml-2 text-amber-700">· {{ link.status }}</span>
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-50"
+                                                @click="unlinkTelegramLink(link.id)"
+                                            >
+                                                Remove
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+
                                 <div id="telegram-link-actions" class="mt-6 flex flex-wrap gap-3">
                                     <button
                                         type="button"
@@ -551,14 +582,6 @@ const saveNotificationChannels = () => {
                                         @click="generateTelegramCode"
                                     >
                                         Get connection code
-                                    </button>
-                                    <button
-                                        v-if="telegram.linked"
-                                        type="button"
-                                        class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-50"
-                                        @click="unlinkTelegram"
-                                    >
-                                        Unlink
                                     </button>
                                 </div>
 
