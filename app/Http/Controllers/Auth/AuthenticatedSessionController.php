@@ -14,6 +14,10 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
     /**
      * Display the login view.
      */
@@ -34,7 +38,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        ActivityLogService::logAuth($request->user()->id, 'logged_in', 'User logged in', $request);
+        $this->activityLog->logAuth($request->user()->id, 'logged_in', 'User logged in', $request);
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
@@ -46,7 +50,7 @@ class AuthenticatedSessionController extends Controller
     {
         $user = $request->user();
         if ($user) {
-            ActivityLogService::logAuth($user->id, 'logged_out', 'User logged out', $request);
+            $this->activityLog->logAuth($user->id, 'logged_out', 'User logged out', $request);
         }
 
         Auth::guard('web')->logout();

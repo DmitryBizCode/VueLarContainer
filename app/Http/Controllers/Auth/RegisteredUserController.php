@@ -17,6 +17,10 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
     /**
      * Display the registration view.
      */
@@ -66,7 +70,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        ActivityLogService::logAuth($user->id, 'registered', 'New user registration', $request);
+        $this->activityLog->logAuth($user->id, 'registered', 'New user registration', $request);
 
         return redirect(route('dashboard', absolute: false));
     }

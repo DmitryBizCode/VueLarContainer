@@ -21,6 +21,10 @@ class AdminRentalController extends Controller
 {
     private const APPROVAL_REJECT_PREFIX = 'APPROVAL_REJECTED:';
 
+    public function __construct(
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
     public function index(Request $request): Response
     {
         $validated = $request->validate([
@@ -382,7 +386,7 @@ class AdminRentalController extends Controller
             }
             $rental->save();
 
-            ActivityLogService::log(
+            $this->activityLog->log(
                 $request->user()->id,
                 "status_changed_to_{$nextStatus}",
                 'Rental',
@@ -433,7 +437,7 @@ class AdminRentalController extends Controller
         }
 
         DB::transaction(function () use ($request, $rental) {
-            ActivityLogService::log(
+            $this->activityLog->log(
                 $request->user()->id,
                 'rental_deleted',
                 'Rental',

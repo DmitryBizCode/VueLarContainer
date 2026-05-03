@@ -14,6 +14,10 @@ use Inertia\Response;
 
 class AdminInquiryController extends Controller
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
     public function index(Request $request): Response
     {
         $validated = validator(
@@ -56,7 +60,7 @@ class AdminInquiryController extends Controller
         $inquiry->fill($request->validated());
         $inquiry->save();
 
-        ActivityLogService::log(
+        $this->activityLog->log(
             $request->user()->id,
             'inquiry_handling_updated',
             'Inquiry',

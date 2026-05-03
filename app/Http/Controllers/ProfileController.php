@@ -17,6 +17,10 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
     /**
      * Display the user's profile form.
      */
@@ -93,7 +97,7 @@ class ProfileController extends Controller
         $user->fill($request->validated());
         $user->save();
 
-        ActivityLogService::log(
+        $this->activityLog->log(
             $user->id,
             'notification_channels_updated',
             'User',
@@ -124,7 +128,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        ActivityLogService::log(
+        $this->activityLog->log(
             $user->id,
             'profile_updated',
             'User',
@@ -149,7 +153,7 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        ActivityLogService::logAuth($user->id, 'account_deleted', 'User deleted their account', $request);
+        $this->activityLog->logAuth($user->id, 'account_deleted', 'User deleted their account', $request);
 
         Auth::logout();
 

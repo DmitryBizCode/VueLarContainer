@@ -32,4 +32,14 @@ final class FinanceStatusGroups
             self::TRANSACTION_FAILURE,
         )));
     }
+
+    /**
+     * SQL fragment: LOWER({column}) IN ('a','b',...) for raw queries.
+     *
+     * @param  string[]  $statuses
+     */
+    public static function sqlLowerStatusIn(string $column, array $statuses): string
+    {
+        return "LOWER({$column}) IN ('".implode("','", $statuses)."')";
+    }
 }

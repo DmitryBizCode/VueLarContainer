@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class ActivityLogService
 {
-    public static function log(
+    public function log(
         int $userId,
         string $action,
         string $modelName,
@@ -41,8 +41,8 @@ class ActivityLogService
         ]);
     }
 
-    public static function logAuth(int $userId, string $action, ?string $description = null, ?Request $request = null): ActivityLog
+    public function logAuth(int $userId, string $action, ?string $description = null, ?Request $request = null): ActivityLog
     {
-        return self::log($userId, $action, 'User', $userId, null, null, $description, $request ?? request());
+        return $this->log($userId, $action, 'User', $userId, null, null, $description, $request ?? request());
     }
 }

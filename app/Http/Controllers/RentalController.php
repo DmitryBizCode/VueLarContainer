@@ -35,13 +35,14 @@ class RentalController extends Controller
     use VerifiesRentalIsIotEligible;
 
     public function __construct(
+        private readonly ActivityLogService $activityLog,
         private readonly ContainerAvailabilityService $availabilityService,
         private readonly RentalPricingService $pricingService,
         private readonly TelemetryAnalyticsService $telemetryAnalytics,
         private readonly MonitorChartsService $monitorCharts,
         private readonly VesselPortScheduleService $vesselSchedule,
         private readonly RouteValidationService $routeValidation,
-        private readonly RentalRouteFeasibilityService $feasibility
+        private readonly RentalRouteFeasibilityService $feasibility,
     ) {}
 
     public function index(): RedirectResponse
@@ -842,7 +843,7 @@ class RentalController extends Controller
         }
 
         DB::transaction(function () use ($request, $rental) {
-            ActivityLogService::log(
+            $this->activityLog->log(
                 $request->user()->id,
                 'rental_deleted',
                 'Rental',
@@ -877,7 +878,7 @@ class RentalController extends Controller
 
     private function logRentalActivity(int $userId, string $action, Rental $rental, ?array $oldValues = null, ?Request $request = null): void
     {
-        ActivityLogService::log(
+        $this->activityLog->log(
             $userId,
             $action,
             'Rental',
