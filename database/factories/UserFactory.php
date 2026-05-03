@@ -37,6 +37,8 @@ class UserFactory extends Factory
             'account_status' => 'active',
             'role' => 'client',
             'country_id' => null,
+            'notification_email_enabled' => true,
+            'notification_telegram_enabled' => true,
         ];
     }
 

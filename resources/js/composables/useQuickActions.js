@@ -19,6 +19,7 @@ export function useQuickActions() {
         return [
             { key: 'back-to-app', label: 'Back to app', icon: 'arrow-left', href: route('dashboard'), active: false },
             { key: 'admin-dashboard', label: 'Dashboard', icon: 'dashboard', href: route('admin.dashboard'), active: currentUrl === '/admin' || currentUrl === '/admin/' },
+            { key: 'admin-inquiries', label: 'Inquiries', icon: 'inbox', href: route('admin.inquiries.index'), active: isActiveByPrefix(currentUrl, '/admin/inquiries') },
             { key: 'admin-rentals', label: 'Rentals', icon: 'rental', href: route('admin.rentals.index'), active: isActiveByPrefix(currentUrl, '/admin/rentals') },
             { key: 'admin-approvals', label: 'Approvals', icon: 'approval', href: route('admin.approvals'), active: isActiveByPrefix(currentUrl, '/admin/approvals') },
             { key: 'admin-finance', label: 'Finance', icon: 'finance', href: route('admin.finance.index'), active: isActiveByPrefix(currentUrl, '/admin/finance') },

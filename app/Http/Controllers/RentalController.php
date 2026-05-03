@@ -16,11 +16,12 @@ use App\Services\ActivityLogService;
 use App\Services\ContainerAvailabilityService;
 use App\Services\IotAuditChainService;
 use App\Services\MonitorChartsService;
+use App\Services\Notifications\NotificationService;
 use App\Services\RentalPricingService;
 use App\Services\RentalRouteFeasibilityService;
+use App\Services\RouteValidationService;
 use App\Services\TelemetryAnalyticsService;
 use App\Services\VesselPortScheduleService;
-use App\Services\RouteValidationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -901,12 +902,17 @@ class RentalController extends Controller
             return;
         }
 
-        Notification::query()->create([
-            'user_id' => $userId,
-            'title' => $title,
-            'message' => $message,
-            'type' => $type,
-            'is_read' => false,
-        ]);
+        $user = User::query()->find($userId);
+        if (! $user) {
+            return;
+        }
+
+        app(NotificationService::class)->notifyUserInApp(
+            $user,
+            $type,
+            $title,
+            $message,
+            route('rentals.center'),
+        );
     }
 }

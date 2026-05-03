@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateRentalStatusRequest;
 use App\Models\ActivityLog;
-use App\Models\Notification;
 use App\Models\Rental;
+use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\Notifications\NotificationService;
 use App\Services\RentalShipmentProvisionerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -391,13 +392,16 @@ class AdminRentalController extends Controller
                 "Rental #{$rental->id} status changed to {$nextStatus} by ".trim($request->user()->first_name.' '.$request->user()->last_name),
                 $request
             );
-            Notification::query()->create([
-                'user_id' => $rental->user_id,
-                'title' => "Rental #{$rental->id} status update",
-                'message' => "Rental status changed to '{$nextStatus}'.",
-                'type' => $nextStatus === 'rejected' ? 'warning' : 'info',
-                'is_read' => false,
-            ]);
+            $owner = User::query()->find($rental->user_id);
+            if ($owner) {
+                app(NotificationService::class)->notifyUserInApp(
+                    $owner,
+                    $nextStatus === 'rejected' ? 'warning' : 'info',
+                    "Rental #{$rental->id} status update",
+                    "Rental status changed to '{$nextStatus}'.",
+                    route('rentals.center'),
+                );
+            }
         });
 
         if ($nextStatus === 'approved') {

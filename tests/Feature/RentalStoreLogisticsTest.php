@@ -213,4 +213,99 @@ class RentalStoreLogisticsTest extends TestCase
                 ->assertSessionDoesntHaveErrors('delivery_mode');
         }
     }
+
+    public function test_store_accepts_balanced_routing_priority(): void
+    {
+        $countryId = DB::table('countries')->insertGetId([
+            'name' => 'Balanceland',
+            'iso_code' => 'BL',
+            'phone_code' => '+0',
+            'interest_tax' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $owner = Owner::query()->create([
+            'name' => 'Bal Owner',
+            'email' => 'bal-owner-'.uniqid().'@test.local',
+            'phone_number' => '+1000000010',
+        ]);
+
+        $origin = Port::query()->create([
+            'name' => 'Bal Origin',
+            'city' => 'Alpha',
+            'country_id' => $countryId,
+        ]);
+        $destination = Port::query()->create([
+            'name' => 'Bal Destination',
+            'city' => 'Beta',
+            'country_id' => $countryId,
+        ]);
+
+        $route = ShippingRoute::query()->create([
+            'origin_port_id' => $origin->id,
+            'destination_port_id' => $destination->id,
+            'estimated_days' => 4,
+            'distance' => 1200.0,
+            'route_status' => 'open',
+        ]);
+
+        $container = Container::query()->create([
+            'serial_number' => 'BAL-'.uniqid(),
+            'type' => 'standard',
+            'width' => 2.44,
+            'length' => 6.06,
+            'height' => 2.59,
+            'max_weight' => 28200,
+            'manufacture_date' => now()->subYear(),
+            'photo' => null,
+            'iot_active' => false,
+            'current_status' => 'available',
+            'owner_id' => $owner->id,
+            'current_port_id' => $origin->id,
+        ]);
+
+        Vessel::query()->create([
+            'name' => 'Bal Vessel',
+            'imo_number' => 'IMO'.substr(str_replace('.', '', uniqid('', true)), 0, 12),
+            'capacity_teu' => 900,
+            'status' => 'active',
+            'current_port_id' => $origin->id,
+            'last_inspection_date' => now()->subMonth()->toDateString(),
+        ]);
+
+        $user = User::factory()->create(['country_id' => $countryId]);
+
+        $payload = [
+            'route_mode' => 'route',
+            'route_id' => $route->id,
+            'container_id' => $container->id,
+            'start_date' => now()->addDays(12)->toDateString(),
+            'end_date' => now()->addDays(30)->toDateString(),
+            'cargo_types' => ['electronics'],
+            'cargo_details' => null,
+            'requested_weight' => null,
+            'cargo_volume_cbm' => null,
+            'package_count' => null,
+            'cargo_value' => null,
+            'priority' => 'normal',
+            'routing_priority' => 'balanced',
+            'incoterm' => null,
+            'loading_type' => 'fcl',
+            'delivery_mode' => 'port_to_port',
+            'sustainability_pref' => 'standard',
+            'insurance_required' => false,
+            'requires_customs_clearance' => false,
+            'hazardous_material' => false,
+            'requires_escort' => false,
+            'seal_required' => false,
+            'contact_name' => 'Test User',
+            'contact_phone' => '+10005550123',
+            'terms_accepted' => true,
+        ];
+
+        $this->actingAs($user)
+            ->post(route('rentals.request.store'), $payload)
+            ->assertSessionDoesntHaveErrors('routing_priority');
+    }
 }

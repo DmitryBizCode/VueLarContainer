@@ -1,7 +1,8 @@
 <script setup>
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import { usePage } from '@inertiajs/vue3';
+import NotificationBell from '@/Components/NotificationBell.vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const page = usePage();
@@ -44,6 +45,16 @@ defineEmits(['toggle-mobile-sidebar']);
                         <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 100 2h12a1 1 0 100-2H4z" clip-rule="evenodd" />
                     </svg>
                 </button>
+                <Link
+                    v-if="isAdminContext"
+                    :href="route('dashboard')"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                    <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Back to app
+                </Link>
                 <div class="hidden pl-1 sm:block lg:pl-3">
                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Operations panel</p>
                     <p class="text-sm font-semibold text-slate-700">Unified logistics workspace</p>
@@ -57,6 +68,8 @@ defineEmits(['toggle-mobile-sidebar']);
                     </svg>
                     <span class="ml-2 text-xs font-medium text-slate-500">Search modules and records</span>
                 </div>
+
+                <NotificationBell />
 
                 <Dropdown align="right" width="56">
                     <template #trigger>

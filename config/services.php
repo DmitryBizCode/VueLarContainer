@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    // Merged by MailtrapSdkProvider; duplicated here for php artisan config:cache and clarity.
+    'mailtrap-sdk' => [
+        'host' => env('MAILTRAP_HOST', 'send.api.mailtrap.io'),
+        'apiKey' => env('MAILTRAP_API_KEY'),
+        'inboxId' => env('MAILTRAP_INBOX_ID'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME', ''),
+        'timeout' => (int) env('TELEGRAM_HTTP_TIMEOUT', 10),
+    ],
+
 ];

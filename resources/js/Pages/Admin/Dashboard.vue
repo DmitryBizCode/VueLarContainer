@@ -24,17 +24,9 @@ const formatDate = (v) =>
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h1 class="mt-1 text-xl font-bold text-slate-900">Dashboard</h1>
-                </div>
-                <Link
-                    :href="route('dashboard')"
-                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    Back to app
-                </Link>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                <h1 class="mt-1 text-xl font-bold text-slate-900">Dashboard</h1>
             </div>
         </template>
 

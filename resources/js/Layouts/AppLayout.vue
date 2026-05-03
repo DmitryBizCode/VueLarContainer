@@ -1,8 +1,13 @@
 <script setup>
 import Navbar from '@/Components/Navbar.vue';
 import Footer from '@/Components/Footer.vue';
+import { useFlashToToast } from '@/composables/useFlashToToast';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { Toaster } from 'vue-sonner';
+import 'vue-sonner/style.css';
+
+useFlashToToast();
 
 const page = usePage();
 
@@ -85,6 +90,8 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+        <Toaster position="top-right" :rich-colors="true" :expand="true" :visible-toasts="5" :gap="8" />
     </div>
 </template>
 

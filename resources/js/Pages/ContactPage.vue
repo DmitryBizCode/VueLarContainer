@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
@@ -9,6 +9,7 @@ const form = ref({
     subject: '',
     message: '',
 });
+const submitting = ref(false);
 
 const subjects = ref([
     'General Inquiry',
@@ -93,7 +94,16 @@ const highlights = ref([
 ]);
 
 const handleSubmit = () => {
-    console.log('Form submitted:', form.value);
+    submitting.value = true;
+    router.post(route('contact.submit'), form.value, {
+        preserveScroll: true,
+        onFinish: () => {
+            submitting.value = false;
+        },
+        onSuccess: () => {
+            form.value = { name: '', email: '', subject: '', message: '' };
+        },
+    });
 };
 </script>
 
@@ -319,9 +329,10 @@ const handleSubmit = () => {
                                 </div>
                                 <button
                                     type="submit"
-                                    class="w-full px-8 py-3.5 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-sm rounded-xl hover:from-blue-800 hover:to-blue-700 transition-all shadow-lg shadow-blue-900/20"
+                                    :disabled="submitting"
+                                    class="w-full px-8 py-3.5 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-sm rounded-xl hover:from-blue-800 hover:to-blue-700 transition-all shadow-lg shadow-blue-900/20 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    Send Message
+                                    {{ submitting ? 'Sending…' : 'Send Message' }}
                                 </button>
                             </form>
                         </div>

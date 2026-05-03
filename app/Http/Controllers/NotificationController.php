@@ -61,7 +61,7 @@ class NotificationController extends Controller
     {
         $userId = (int) $request->user()->id;
         if ((int) $notification->user_id !== $userId) {
-            abort(403);
+            abort(404);
         }
 
         $notification->forceFill(['is_read' => true])->save();

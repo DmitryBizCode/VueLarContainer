@@ -307,7 +307,7 @@ class DashboardController extends Controller
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(6)
-            ->select(['id', 'title', 'message', 'type', 'is_read', 'created_at'])
+            ->select(['id', 'title', 'message', 'type', 'is_read', 'action_url', 'created_at'])
             ->get();
 
         $latestNotifications = collect($latestPersistedNotifications)->values();
@@ -504,6 +504,7 @@ class DashboardController extends Controller
             'title' => $title,
             'message' => $message,
             'type' => $type,
+            'action_url' => null,
             'is_read' => false,
             'created_at' => now(),
             'updated_at' => now(),

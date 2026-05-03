@@ -32,7 +32,7 @@ class StoreRentalRequest extends FormRequest
             'package_count' => ['nullable', 'integer', 'min:1'],
             'cargo_value' => ['nullable', 'numeric', 'min:0'],
             'priority' => ['required', Rule::in(['normal', 'urgent', 'express'])],
-            'routing_priority' => ['nullable', 'string', Rule::in(['speed', 'cost'])],
+            'routing_priority' => ['nullable', 'string', Rule::in(['speed', 'cost', 'balanced'])],
             'incoterm' => ['nullable', Rule::in(['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'DAP', 'DDP'])],
             'loading_type' => ['required', Rule::in(['fcl', 'lcl'])],
             'delivery_mode' => ['required', Rule::in(['port_to_port', 'door_to_port', 'port_to_door', 'door_to_door'])],

@@ -211,7 +211,7 @@ class ContainerAvailabilityService
         if (in_array($routingPriority, ['cost'], true)) {
             return 'cost';
         }
-        if (in_array($routingPriority, ['speed'], true)) {
+        if (in_array($routingPriority, ['speed', 'balanced'], true)) {
             return 'time';
         }
 

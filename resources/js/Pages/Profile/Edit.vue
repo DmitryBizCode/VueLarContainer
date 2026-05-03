@@ -3,8 +3,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
-import { Head, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import axios from 'axios';
+import { useToast } from '@/composables/useToast';
 
 const props = defineProps({
     mustVerifyEmail: {
@@ -39,10 +41,53 @@ const props = defineProps({
             countryName: null,
         }),
     },
+    telegram: {
+        type: Object,
+        default: () => ({
+            linked: false,
+            chat_id: null,
+            bot_username: '',
+        }),
+    },
+    notificationChannels: {
+        type: Object,
+        default: () => ({
+            email_enabled: true,
+            telegram_enabled: true,
+            update_route: 'profile.notification-channels.update',
+        }),
+    },
 });
 
 const user = usePage().props.auth.user;
 const activeTab = ref('overview');
+const { success: toastSuccess, error: toastError } = useToast();
+
+const telegramLinkCode = ref(null);
+const telegramLinkExpiresAt = ref(null);
+
+const telegramBotUsernameClean = computed(() => String(props.telegram?.bot_username || '').replace(/^@/, '').trim());
+
+const telegramDeepLink = computed(() => {
+    if (!telegramBotUsernameClean.value || !telegramLinkCode.value) {
+        return null;
+    }
+    return `https://t.me/${telegramBotUsernameClean.value}?start=${encodeURIComponent(telegramLinkCode.value)}`;
+});
+
+const channelEmailEnabled = ref(!!props.notificationChannels?.email_enabled);
+const channelTelegramEnabled = ref(!!props.notificationChannels?.telegram_enabled);
+const channelsSaving = ref(false);
+
+watch(
+    () => props.notificationChannels,
+    (ch) => {
+        if (!ch) return;
+        channelEmailEnabled.value = !!ch.email_enabled;
+        channelTelegramEnabled.value = !!ch.telegram_enabled;
+    },
+    { deep: true },
+);
 
 const fullName = computed(() => [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.email);
 const initials = computed(() => [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || 'U');
@@ -52,6 +97,7 @@ const tabs = [
     { key: 'overview', label: 'Overview' },
     { key: 'account', label: 'Account' },
     { key: 'security', label: 'Security' },
+    { key: 'notifications', label: 'Notifications' },
     { key: 'danger', label: 'Danger Zone' },
 ];
 
@@ -79,6 +125,54 @@ const markerColor = (state) => {
 const formatDate = (value) => {
     if (!value) return '—';
     return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+};
+
+const generateTelegramCode = async () => {
+    telegramLinkCode.value = null;
+    telegramLinkExpiresAt.value = null;
+    try {
+        const { data } = await axios.post(route('telegram.link-code'));
+        telegramLinkCode.value = data?.code ?? null;
+        telegramLinkExpiresAt.value = data?.expires_at ?? null;
+        toastSuccess('Connection code ready');
+    } catch (e) {
+        toastError('Failed to generate code');
+    }
+};
+
+const unlinkTelegram = async () => {
+    try {
+        await axios.post(route('telegram.unlink'));
+        toastSuccess('Telegram unlinked');
+        window.location.reload();
+    } catch {
+        toastError('Failed to unlink');
+    }
+};
+
+const saveNotificationChannels = () => {
+    channelsSaving.value = true;
+    router.patch(
+        route(props.notificationChannels.update_route),
+        {
+            notification_email_enabled: channelEmailEnabled.value,
+            notification_telegram_enabled: channelTelegramEnabled.value,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onError: (errors) => {
+                const first =
+                    errors?.notification_email_enabled?.[0] ||
+                    errors?.notification_telegram_enabled?.[0] ||
+                    Object.values(errors || {})[0]?.[0];
+                toastError(first || 'Could not save preferences');
+            },
+            onFinish: () => {
+                channelsSaving.value = false;
+            },
+        },
+    );
 };
 </script>
 
@@ -279,6 +373,202 @@ const formatDate = (value) => {
                 >
                     <section v-if="activeTab === 'security'" key="security" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
                         <UpdatePasswordForm />
+                    </section>
+                </Transition>
+
+                <Transition
+                    mode="out-in"
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="translate-y-1 opacity-0"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-to-class="-translate-y-1 opacity-0"
+                >
+                    <section v-if="activeTab === 'notifications'" key="notifications">
+                        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+                            <div class="max-w-2xl space-y-2">
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Delivery channels</p>
+                                <h3 class="text-xl font-bold text-slate-900">Where to send alerts</h3>
+                                <p class="text-sm text-slate-600">
+                                    New items always appear under <span class="font-semibold text-slate-800">Notifications</span> in your cabinet. Choose if we should also email you or push to Telegram.
+                                </p>
+                            </div>
+
+                            <div class="mt-6 max-w-2xl space-y-3">
+                                <label
+                                    class="flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-300 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-slate-900">Email</p>
+                                        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                                            Send copies to <span class="font-medium text-slate-700">{{ user.email }}</span> (rental updates, messages, and other cabinet alerts).
+                                        </p>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <input v-model="channelEmailEnabled" type="checkbox" class="peer sr-only" />
+                                        <span
+                                            class="relative inline-block h-8 w-14 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400 peer-focus-visible:ring-offset-2 after:absolute after:left-1 after:top-1 after:h-6 after:w-6 after:rounded-full after:bg-white after:shadow after:transition after:content-[''] peer-checked:after:translate-x-6"
+                                        />
+                                    </div>
+                                </label>
+
+                                <label
+                                    class="flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-300 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-slate-900">Telegram</p>
+                                        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                                            Instant pushes to the bot when this is on, your account is linked below, and the server allows Telegram.
+                                        </p>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <input v-model="channelTelegramEnabled" type="checkbox" class="peer sr-only" />
+                                        <span
+                                            class="relative inline-block h-8 w-14 rounded-full bg-slate-300 transition peer-checked:bg-sky-500 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400 peer-focus-visible:ring-offset-2 after:absolute after:left-1 after:top-1 after:h-6 after:w-6 after:rounded-full after:bg-white after:shadow after:transition after:content-[''] peer-checked:after:translate-x-6"
+                                        />
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="mt-6 flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                    :disabled="channelsSaving"
+                                    @click="saveNotificationChannels"
+                                >
+                                    {{ channelsSaving ? 'Saving…' : 'Save preferences' }}
+                                </button>
+                                <p class="text-xs text-slate-500">You can turn off both — you will only see alerts inside the app.</p>
+                            </div>
+
+                            <div class="mt-10 max-w-2xl border-t border-slate-100 pt-10">
+                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="space-y-2">
+                                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Telegram account</p>
+                                        <h3 class="text-xl font-bold text-slate-900">Connect Telegram bot</h3>
+                                        <p class="text-sm text-slate-600">
+                                            Generate a code here, then paste it in the bot or use
+                                            <span class="font-semibold text-slate-800">Open in Telegram</span> when configured. Turn on
+                                            <span class="font-semibold text-slate-800">Telegram</span> above for pushes. The bot shows button rows and a
+                                            <span class="font-semibold text-slate-800">Menu</span> (↔) with commands while the server worker is running.
+                                        </p>
+                                    </div>
+                                    <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                                        <span
+                                            v-if="telegram.linked"
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800"
+                                        >
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                            Linked
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700"
+                                        >
+                                            <span class="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                            Not linked
+                                        </span>
+                                        <span v-if="telegramBotUsernameClean" class="text-xs font-medium text-slate-600"> @{{ telegramBotUsernameClean }} </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="!telegramBotUsernameClean"
+                                    class="mt-6 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950"
+                                >
+                                    <p class="font-semibold text-amber-900">Open in Telegram</p>
+                                    <p class="mt-1 text-xs leading-relaxed text-amber-900/90">
+                                        Set <code class="rounded bg-amber-100/90 px-1 py-0.5 font-mono text-[11px]">TELEGRAM_BOT_USERNAME</code> in the server env
+                                        (no <code class="font-mono">@</code>), then reload. You can still open the bot manually and paste the code.
+                                    </p>
+                                </div>
+
+                                <p class="mt-6 text-xs text-slate-500">
+                                    Linking alone does not send messages until <span class="font-semibold text-slate-700">Telegram</span> is enabled above.
+                                </p>
+
+                                <ol class="mt-4 grid gap-3 sm:grid-cols-3">
+                                    <li
+                                        class="flex gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-300"
+                                    >
+                                        <span
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200/80 text-sm font-bold text-slate-800"
+                                            >1</span
+                                        >
+                                        <span class="text-xs font-medium leading-snug text-slate-700">Get a code below</span>
+                                    </li>
+                                    <li
+                                        class="flex gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-300"
+                                    >
+                                        <span
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200/80 text-sm font-bold text-slate-800"
+                                            >2</span
+                                        >
+                                        <span class="text-xs font-medium leading-snug text-slate-700">Open the bot, tap Start, or paste the code</span>
+                                    </li>
+                                    <li
+                                        class="flex gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-300"
+                                    >
+                                        <span
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200/80 text-sm font-bold text-slate-800"
+                                            >3</span
+                                        >
+                                        <span class="text-xs font-medium leading-snug text-slate-700">Use bot buttons or Menu (↔) for commands</span>
+                                    </li>
+                                </ol>
+
+                                <div
+                                    v-if="telegramLinkCode"
+                                    class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5"
+                                >
+                                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Active connection code</p>
+                                    <p class="mt-2 font-mono text-xl font-bold tracking-wide text-slate-900 sm:text-2xl">{{ telegramLinkCode }}</p>
+                                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                                        <a
+                                            v-if="telegramDeepLink"
+                                            :href="telegramDeepLink"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 underline decoration-sky-300 underline-offset-2 transition hover:text-sky-900"
+                                        >
+                                            Open in Telegram
+                                            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                        <span class="text-xs text-slate-500">Expires {{ telegramLinkExpiresAt || '—' }}</span>
+                                    </div>
+                                    <p class="mt-3 text-xs text-slate-600">
+                                        Or send <span class="font-mono font-semibold text-slate-800">{{ telegramLinkCode }}</span> as one message.
+                                        <span class="font-mono text-[11px] text-slate-500">/link {{ telegramLinkCode }}</span>
+                                    </p>
+                                </div>
+
+                                <div id="telegram-link-actions" class="mt-6 flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800"
+                                        @click="generateTelegramCode"
+                                    >
+                                        Get connection code
+                                    </button>
+                                    <button
+                                        v-if="telegram.linked"
+                                        type="button"
+                                        class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-50"
+                                        @click="unlinkTelegram"
+                                    >
+                                        Unlink
+                                    </button>
+                                </div>
+
+                                <p class="mt-4 text-xs text-slate-500">
+                                    The command menu in Telegram is registered when the
+                                    <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px]">telegram:poll</code> worker starts (see
+                                    <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px]">.env.example</code>).
+                                </p>
+                            </div>
+                        </div>
                     </section>
                 </Transition>
 

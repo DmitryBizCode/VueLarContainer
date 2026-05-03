@@ -75,6 +75,11 @@ return [
             'channel' => env('MAIL_LOG_CHANNEL'),
         ],
 
+        // Mailtrap Email API (railsware/mailtrap-php). Credentials: config/services.php → mailtrap-sdk (env MAILTRAP_*).
+        'mailtrap' => [
+            'transport' => 'mailtrap-sdk',
+        ],
+
         'array' => [
             'transport' => 'array',
         ],

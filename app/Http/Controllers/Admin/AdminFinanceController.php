@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Container;
-use App\Models\Notification;
 use App\Models\Rental;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\Notifications\NotificationService;
 use App\Services\RentalLedgerTransactionService;
 use App\Support\FinanceStatusGroups;
 use Carbon\Carbon;
@@ -104,7 +105,7 @@ class AdminFinanceController extends Controller
 
         $rejectedApproval = Cache::remember('admin_finance:rejected_approval:v1', now()->addMinutes(5), function () {
             $row = DB::table('rentals')
-                ->selectRaw("COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum")
+                ->selectRaw('COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
                 ->whereRaw("LOWER(COALESCE(payment_status, '')) = 'rejected_by_approval'")
                 ->first();
 
@@ -1062,12 +1063,15 @@ class AdminFinanceController extends Controller
             $request
         );
 
-        Notification::query()->create([
-            'user_id' => $rental->user_id,
-            'title' => "Rental #{$rental->id} cancelled",
-            'message' => self::REJECT_REASON_NON_PAYMENT,
-            'type' => 'warning',
-            'is_read' => false,
-        ]);
+        $owner = User::query()->find($rental->user_id);
+        if ($owner) {
+            app(NotificationService::class)->notifyUserInApp(
+                $owner,
+                'warning',
+                "Rental #{$rental->id} cancelled",
+                self::REJECT_REASON_NON_PAYMENT,
+                route('rentals.center'),
+            );
+        }
     }
 }

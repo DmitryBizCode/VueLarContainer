@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\UpdateNotificationChannelsRequest;
 use App\Models\Country;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -53,7 +54,42 @@ class ProfileController extends Controller
                 'lastUpdatedAt' => $user->updated_at,
                 'countryName' => $user->country?->name,
             ],
+            'telegram' => [
+                'linked' => ! is_null($user->telegram_chat_id),
+                'chat_id' => $user->telegram_chat_id,
+                'bot_username' => (string) config('services.telegram.bot_username', ''),
+            ],
+            'notificationChannels' => [
+                'email_enabled' => (bool) $user->notification_email_enabled,
+                'telegram_enabled' => (bool) $user->notification_telegram_enabled,
+                'update_route' => $request->routeIs('admin.*')
+                    ? 'admin.profile.notification-channels.update'
+                    : 'profile.notification-channels.update',
+            ],
         ]);
+    }
+
+    public function updateNotificationChannels(UpdateNotificationChannelsRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $old = $user->only(['notification_email_enabled', 'notification_telegram_enabled']);
+        $user->fill($request->validated());
+        $user->save();
+
+        ActivityLogService::log(
+            $user->id,
+            'notification_channels_updated',
+            'User',
+            $user->id,
+            $old,
+            $user->only(['notification_email_enabled', 'notification_telegram_enabled']),
+            'Notification delivery preferences updated',
+            $request
+        );
+
+        $target = $request->routeIs('admin.*') ? 'admin.profile.edit' : 'profile.edit';
+
+        return Redirect::route($target)->with('status', 'Notification preferences saved');
     }
 
     /**

@@ -4,22 +4,28 @@ use App\Http\Controllers\Admin\AdminActivityLogController;
 use App\Http\Controllers\Admin\AdminContainerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFinanceController;
+use App\Http\Controllers\Admin\AdminInquiryController;
 use App\Http\Controllers\Admin\AdminOwnerController;
 use App\Http\Controllers\Admin\AdminPortController;
 use App\Http\Controllers\Admin\AdminRentalController;
 use App\Http\Controllers\Admin\AdminRequestLogController;
 use App\Http\Controllers\Admin\AdminRouteController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminUserMessageController;
 use App\Http\Controllers\Admin\AdminVesselController;
 use App\Http\Controllers\Api\MonitorChartsController;
 use App\Http\Controllers\Api\RentalTelemetryToggleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceMonitoringController;
+use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\LogisticsMapDataController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RentalController;
 use App\Http\Controllers\RentalsCenterController;
+use App\Http\Controllers\TelegramLinkController;
+use App\Http\Controllers\UserNotificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -34,6 +40,10 @@ Route::get('/services', function () {
 Route::get('/contact', function () {
     return Inertia::render('ContactPage');
 })->name('contact');
+
+Route::post('/contact', [InquiryController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('contact.submit');
 
 Route::get('/test-vue', function () {
     return Inertia::render('TestVue');
@@ -61,10 +71,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware('verified')->group(function () {
+        Route::patch('/profile/notification-channels', [ProfileController::class, 'updateNotificationChannels'])
+            ->name('profile.notification-channels.update');
+        Route::post('/telegram/link-code', [TelegramLinkController::class, 'createLinkCode'])->name('telegram.link-code');
+        Route::post('/telegram/unlink', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
+
+        Route::get('/notifications', [UserNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/unread-count', [UserNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
         Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
             ->name('notifications.read');
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
             ->name('notifications.read-all');
+        Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
 
         Route::get('/rentals/request', [RentalController::class, 'create'])->name('rentals.request.create');
         Route::post('/rentals/request/preview', [RentalController::class, 'preview'])->name('rentals.request.preview');
@@ -86,8 +104,12 @@ Route::middleware('auth')->group(function () {
 Route::prefix('admin')->middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('admin.profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('admin.profile.update');
+    Route::patch('/profile/notification-channels', [ProfileController::class, 'updateNotificationChannels'])
+        ->name('admin.profile.notification-channels.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('admin.profile.destroy');
     Route::get('/', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/inquiries', [AdminInquiryController::class, 'index'])->name('admin.inquiries.index');
+    Route::patch('/inquiries/{inquiry}', [AdminInquiryController::class, 'update'])->name('admin.inquiries.update');
     Route::get('/approvals', [AdminRentalController::class, 'approvals'])->name('admin.approvals');
     Route::get('/rentals', [AdminRentalController::class, 'index'])->name('admin.rentals.index');
     Route::get('/rentals/{rental}', [AdminRentalController::class, 'show'])->name('admin.rentals.show');
@@ -131,6 +153,7 @@ Route::prefix('admin')->middleware(['auth', 'verified', 'admin'])->group(functio
     Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
     Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
     Route::patch('/users/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
+    Route::post('/users/{user}/messages', [AdminUserMessageController::class, 'store'])->name('admin.users.messages.store');
     Route::get('/activity-logs', [AdminActivityLogController::class, 'index'])->name('admin.activity-logs.index');
     Route::get('/activity-logs/{activityLog}', [AdminActivityLogController::class, 'show'])->name('admin.activity-logs.show');
     Route::get('/request-logs', [AdminRequestLogController::class, 'index'])->name('admin.request-logs.index');
