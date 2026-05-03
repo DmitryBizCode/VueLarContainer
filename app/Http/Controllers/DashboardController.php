@@ -17,6 +17,6 @@ class DashboardController extends Controller
     {
         $user = $request->user()->loadMissing('country');
 
-        return Inertia::render('Dashboard', $this->dashboardData->buildForUser($user));
+        return Inertia::render('Dashboard/Index', $this->dashboardData->buildForUser($user));
     }
 }

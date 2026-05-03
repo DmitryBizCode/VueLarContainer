@@ -97,7 +97,7 @@ class RentalController extends Controller
             'phone_code' => $c->phone_code ?? '',
         ])->all();
 
-        return Inertia::render('Rentals/Request', [
+        return Inertia::render('Operations/ContainerRentalRequest/Index', [
             'countries' => $countries,
             'user_country_id' => $userCountryId,
             'routes' => $routes->map(fn (ShippingRoute $route) => [

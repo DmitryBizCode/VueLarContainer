@@ -95,7 +95,7 @@ class OperationsDashboardBlocksTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('stats.activeRentals', 1)
             );
     }
@@ -126,7 +126,7 @@ class OperationsDashboardBlocksTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('stats.unreadNotifications', 2)
                 ->has('latestNotifications')
             );
@@ -156,7 +156,7 @@ class OperationsDashboardBlocksTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->has('upcomingMilestones')
                 ->where('upcomingMilestones.0.type', 'start')
             );

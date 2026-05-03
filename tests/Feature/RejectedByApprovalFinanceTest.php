@@ -150,7 +150,7 @@ class RejectedByApprovalFinanceTest extends TestCase
             ->get(route('finance.monitoring'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('FinanceMonitoring')
+                ->component('Operations/FinanceMonitoring/Index')
                 ->has('syntheticTransactions', 1)
                 ->where('syntheticTransactions.0.rental_id', $rental->id)
                 ->where('syntheticTransactions.0.status', 'failed')
@@ -242,7 +242,7 @@ class RejectedByApprovalFinanceTest extends TestCase
             ->get(route('finance.monitoring'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('FinanceMonitoring')
+                ->component('Operations/FinanceMonitoring/Index')
                 ->has('syntheticTransactions')
                 ->where('syntheticTransactions.0.rental_id', $rental->id)
                 ->where('syntheticTransactions.0.status', 'pending')

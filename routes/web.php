@@ -30,15 +30,15 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('HomePage');
+    return Inertia::render('Marketing/HomePage/Index');
 });
 
 Route::get('/services', function () {
-    return Inertia::render('ServicesPage');
+    return Inertia::render('Marketing/ServicesPage/Index');
 })->name('services');
 
 Route::get('/contact', function () {
-    return Inertia::render('ContactPage');
+    return Inertia::render('Marketing/ContactPage/Index');
 })->name('contact');
 
 Route::post('/contact', [InquiryController::class, 'store'])

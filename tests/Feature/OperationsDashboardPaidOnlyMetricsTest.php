@@ -108,7 +108,7 @@ class OperationsDashboardPaidOnlyMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 // Controller may pass DB raw datetime string for MAX(updated_at).
                 ->where('financialOverview.lastTransactionAt', $rejectRental->updated_at->format('Y-m-d H:i:s'))
             );
@@ -153,7 +153,7 @@ class OperationsDashboardPaidOnlyMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('stats.completedRentals', 1)
                 ->where('recentRental.id', $paidCompleted->id)
                 ->where('recentRental.payment_status', 'paid')
@@ -184,7 +184,7 @@ class OperationsDashboardPaidOnlyMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('stats.completedRentals', 1)
             );
     }
@@ -213,7 +213,7 @@ class OperationsDashboardPaidOnlyMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('financialOverview.pendingCount', 1)
                 ->where('financialOverview.pendingAmount', 200)
             );

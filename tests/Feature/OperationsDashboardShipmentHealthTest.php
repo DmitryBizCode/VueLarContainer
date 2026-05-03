@@ -145,7 +145,7 @@ class OperationsDashboardShipmentHealthTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->where('shipmentOverview.inTransitCount', 1)
                 ->where('shipmentOverview.delayedCount', 1)
                 ->where('incidentOverview.openCount', 1)

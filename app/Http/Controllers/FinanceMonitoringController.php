@@ -209,7 +209,7 @@ class FinanceMonitoringController extends Controller
         $syntheticPendingCount = count($syntheticPendingApprovalTransactions);
         $syntheticPendingAmount = array_sum(array_map(fn ($t) => (float) ($t['amount'] ?? 0), $syntheticPendingApprovalTransactions));
 
-        return Inertia::render('FinanceMonitoring', [
+        return Inertia::render('Operations/FinanceMonitoring/Index', [
             'synthetic_ledger_prefix' => $syntheticLedgerPrefix,
             'filters' => $filters,
             'overview' => [

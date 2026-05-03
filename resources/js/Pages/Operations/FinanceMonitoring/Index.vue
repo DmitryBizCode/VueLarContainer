@@ -1,4 +1,5 @@
 <script setup>
+import PageHeader from '@/Components/Layout/PageHeader.vue';
 import Modal from '@/Components/Modal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
@@ -205,15 +206,13 @@ const closeTransactionNotes = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Operations</p>
-                    <h1 class="mt-1 text-xl font-bold text-slate-900">Finance monitoring</h1>
-                </div>
-                <span class="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 sm:inline-flex">
-                    Last transaction: {{ formatDate(props.overview.lastTransactionAt) }}
-                </span>
-            </div>
+            <PageHeader eyebrow="Operations" title="Finance monitoring">
+                <template #aside>
+                    <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                        Last transaction: {{ formatDate(props.overview.lastTransactionAt) }}
+                    </span>
+                </template>
+            </PageHeader>
         </template>
 
         <div class="py-8">

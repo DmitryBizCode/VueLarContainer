@@ -101,7 +101,7 @@ class DashboardFinanceStatusBreakdownTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('Dashboard/Index')
                 ->has('transactionsByStatus')
                 ->has('rentalsByStatus')
                 ->has('rentalsByPaymentStatus')
@@ -120,7 +120,7 @@ class DashboardFinanceStatusBreakdownTest extends TestCase
             ->get(route('finance.monitoring'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('FinanceMonitoring')
+                ->component('Operations/FinanceMonitoring/Index')
                 ->has('transactionsByStatus')
                 ->has('rentalsByStatus')
                 ->has('rentalsByPaymentStatus')

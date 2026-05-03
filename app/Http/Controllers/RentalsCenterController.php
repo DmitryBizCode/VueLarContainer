@@ -181,7 +181,7 @@ class RentalsCenterController extends Controller
             unset($row->price_breakdown);
         }
 
-        return Inertia::render('RentalsCenter', [
+        return Inertia::render('Operations/RentalsCenter/Index', [
             'filters' => [
                 'scope' => $listScope,
                 'status' => $validated['status'] ?? null,

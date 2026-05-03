@@ -1,7 +1,11 @@
 <script setup>
+import PageHeader from '@/Components/Layout/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { formatDateGb, formatMoneyLocale } from '@/utils/formatLocale';
 import { computed } from 'vue';
+import DashboardHeroSection from './Partials/DashboardHeroSection.vue';
+import DashboardStatsCards from './Partials/DashboardStatsCards.vue';
 
 const user = usePage().props.auth.user;
 
@@ -116,25 +120,8 @@ const operationalAttentionCount = computed(
     () => Number(props.shipmentOverview.delayedCount || 0) + Number(props.incidentOverview.highSeverityOpenCount || 0)
 );
 
-const formatDate = (value) => {
-    if (!value) return '—';
-
-    return new Intl.DateTimeFormat('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(value));
-};
-
-const formatMoney = (value) => {
-    const amount = Number(value ?? 0);
-
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-    }).format(amount);
-};
+const formatDate = formatDateGb;
+const formatMoney = (value) => formatMoneyLocale(value, 'USD');
 
 const statusClass = (status) => {
     return 'border-slate-200 bg-slate-50 text-slate-700';
@@ -259,49 +246,21 @@ const markerIconColor = (state) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Control center</p>
-                    <h1 class="mt-1 text-xl font-bold text-slate-900">Operations dashboard</h1>
-                </div>
-                <span class="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 sm:inline-flex">
-                    Profile readiness {{ props.profileCompletion }}%
-                </span>
-            </div>
+            <PageHeader eyebrow="Control center" title="Operations dashboard">
+                <template #aside>
+                    <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                        Profile readiness {{ props.profileCompletion }}%
+                    </span>
+                </template>
+            </PageHeader>
         </template>
 
         <div class="py-8">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <section class="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 p-6 text-white shadow-sm">
-                    <div class="grid gap-5 lg:grid-cols-3">
-                        <div class="lg:col-span-2">
-                            <p class="text-xs uppercase tracking-[0.16em] text-blue-100/80">Live overview</p>
-                            <h2 class="mt-2 text-2xl font-bold">Maritime operations with clear status, finance and routing signals</h2>
-                            <p class="mt-2 max-w-2xl text-sm text-blue-100/85">
-                                Dashboard combines rental lifecycle, shipment timing, payment state and incident load from your current database records.
-                            </p>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
-                                    In transit: {{ props.shipmentOverview.inTransitCount }}
-                                </span>
-                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
-                                    Upcoming arrivals: {{ props.shipmentOverview.upcomingArrivalsCount }}
-                                </span>
-                                <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
-                                    Attention items: {{ operationalAttentionCount }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
-                            <Link :href="route('rentals.request.create')" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-blue-50">
-                                Create rental
-                            </Link>
-                            <Link :href="route('contact')" class="inline-flex items-center justify-center rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
-                                Contact support
-                            </Link>
-                        </div>
-                    </div>
-                </section>
+                <DashboardHeroSection
+                    :shipment-overview="props.shipmentOverview"
+                    :operational-attention-count="operationalAttentionCount"
+                />
 
                 <div class="grid gap-6 xl:grid-cols-12">
                     <aside class="space-y-6 xl:col-span-4">
@@ -376,28 +335,7 @@ const markerIconColor = (state) => {
                     </aside>
 
                     <div class="space-y-6 xl:col-span-8">
-                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Active rentals</p>
-                                <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ props.stats.activeRentals }}</p>
-                                <p class="mt-1 text-sm text-slate-500">Current running contracts.</p>
-                            </div>
-                            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Completed rentals</p>
-                                <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ props.stats.completedRentals }}</p>
-                                <p class="mt-1 text-sm text-slate-500">Finished rental cycles.</p>
-                            </div>
-                            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Unread notifications</p>
-                                <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ props.stats.unreadNotifications }}</p>
-                                <p class="mt-1 text-sm text-slate-500">Need your attention now.</p>
-                            </div>
-                            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Activity logs</p>
-                                <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ props.stats.recentActivityCount }}</p>
-                                <p class="mt-1 text-sm text-slate-500">Recorded user operations.</p>
-                            </div>
-                        </div>
+                        <DashboardStatsCards :stats="props.stats" />
 
                         <div class="grid gap-4 xl:grid-cols-2">
                             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
