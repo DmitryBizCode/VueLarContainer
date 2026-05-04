@@ -19,10 +19,7 @@ class FinanceSyncLedgerTransactionsCommand extends Command
         $would = [];
 
         Rental::query()
-            ->where(function ($q) {
-                $q->whereNotNull('payment_approved_at')
-                    ->orWhereRaw('LOWER(payment_status) = ?', ['paid']);
-            })
+            ->whereRaw('LOWER(payment_status) = ?', ['paid'])
             ->orderBy('id')
             ->chunk(100, function ($rentals) use ($ledger, $dryRun, &$created, &$would) {
                 foreach ($rentals as $rental) {

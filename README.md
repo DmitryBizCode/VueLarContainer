@@ -79,18 +79,17 @@ docker compose run --rm --no-deps node sh -c "npm install"
 
 - Додаток: `http://localhost` (порт змінюється через `NGINX_HTTP_PORT` у `.env`)
 - Vite: `http://localhost:5173`
-- Після `db:seed` можна увійти як **`demo@example.com`** / **`password`** (клієнт; у базі також є демо-оренди з `[demo-seed]` — карта / центр оренд) або як адмін із `DemoAccountSeeder` (**`romeobackend@gmail.com`** / **`123456789`**).
+- Після `db:seed` див. облікові записи в docblock [`DatabaseSeeder`](database/seeders/DatabaseSeeder.php): клієнти **`demo@example.com`** / **`password`**, адміни **`romeobackend@gmail.com`** / **`123456789`**, а також `admin2@demo.local`, `client2@demo.local` тощо. Демо-дані позначені `[demo-scenario:...]` у полях опису/теми (оренди, заявки, транзакції, activity log).
 
 Повністю скинути БД і named volumes (дані в Postgres / Redis / pgAdmin зникають):
 
 ```bash
 docker compose down -v --remove-orphans
 docker compose up -d --build
-docker compose exec php php artisan migrate --force
-docker compose exec php php artisan db:seed
+docker compose exec php php artisan migrate:fresh --seed --force
 ```
 
-Без сідерів: пропусти останній рядок або заміни на `php artisan migrate --force` лише.
+Без сідерів: заміни останній рядок на `php artisan migrate:fresh --force` (або `migrate --force`, якщо таблиці вже створені).
 
 ## IoT simulation: schedule vs worker
 

@@ -4,11 +4,17 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
+/**
+ * Seed the application's database.
+ *
+ * Demo accounts (after {@see DemoAccountSeeder}):
+ * - Admins: romeobackend@gmail.com, admin2@demo.local, admin3@demo.local — password {@see DemoAccountSeeder::ADMIN_PASSWORD}
+ * - Clients: demo@example.com, client2@demo.local, client3@demo.local — password {@see DemoAccountSeeder::CLIENT_PASSWORD}
+ *
+ * Business narratives: {@see DemoBusinessScenarioSeeder}. High-volume rentals: {@see DemoRentalsBulkSeeder}.
+ */
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         $this->call([
@@ -20,7 +26,8 @@ class DatabaseSeeder extends Seeder
             ContainerSeeder::class,
             SensorTypeSeeder::class,
             DemoAccountSeeder::class,
-            MaritimeDemoSeeder::class,
+            DemoBusinessScenarioSeeder::class,
+            DemoRentalsBulkSeeder::class,
         ]);
     }
 }

@@ -13,6 +13,7 @@ use App\Models\Route;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Vessel;
+use App\Services\Admin\AdminFinanceAnalyticsService;
 use App\Support\FinanceStatusGroups;
 use App\Support\PathLabelHelper;
 use App\Support\RequestContextHelper;
@@ -23,6 +24,10 @@ use Inertia\Response;
 
 class AdminDashboardController extends Controller
 {
+    public function __construct(
+        private readonly AdminFinanceAnalyticsService $financeAnalytics,
+    ) {}
+
     public function index(Request $request): Response
     {
         $txGroups = FinanceStatusGroups::transactionGroups();
@@ -93,6 +98,20 @@ class AdminDashboardController extends Controller
             });
         $syntheticPendingApprovalAmount = (float) $syntheticPendingApproval->sum('price');
         $syntheticPendingApprovalCount = (int) $syntheticPendingApproval->count();
+
+        $awaitingCaptureSummary = ['count' => 0, 'amount' => 0.0];
+        if (Schema::hasColumn('rentals', 'payment_approved_at')) {
+            $awaitingCaptureSummary = [
+                'count' => (int) Rental::query()
+                    ->whereNotNull('payment_approved_at')
+                    ->whereRaw("LOWER(payment_status) IN ('pending', 'unpaid')")
+                    ->count(),
+                'amount' => (float) Rental::query()
+                    ->whereNotNull('payment_approved_at')
+                    ->whereRaw("LOWER(payment_status) IN ('pending', 'unpaid')")
+                    ->sum('price'),
+            ];
+        }
 
         $rentalsByPaymentStatus = Rental::query()
             ->selectRaw('LOWER(COALESCE(payment_status, \'unknown\')) as payment_status, COUNT(*) as count, COALESCE(SUM(price), 0) as price_sum')
@@ -201,6 +220,8 @@ class AdminDashboardController extends Controller
                 'created_at' => $r->created_at,
             ]);
 
+        $kpiFormulas = $this->financeAnalytics->buildKpiFormulas();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'rentalsByStatus' => $rentalsByStatus,
@@ -218,6 +239,8 @@ class AdminDashboardController extends Controller
                 'paidCount' => (int) $successCount,
                 'pendingCount' => (int) ($pendingCount + $syntheticPendingApprovalCount),
                 'failedCount' => (int) ($failureCount + $rejectedApproval['count']),
+                'awaitingCaptureCount' => (int) ($awaitingCaptureSummary['count'] ?? 0),
+                'awaitingCaptureAmount' => (float) ($awaitingCaptureSummary['amount'] ?? 0),
                 'totalTransactions' => (int) ($totalTransactions + $syntheticPendingApprovalCount),
                 'transactionsByStatus' => $transactionsByStatus,
                 'rentalsByPaymentStatus' => $rentalsByPaymentStatus,
@@ -231,6 +254,7 @@ class AdminDashboardController extends Controller
                 'topBrowsersOrdered' => $topBrowsersOrdered,
                 'popularPathsUser' => $popularPathsUser,
                 'popularPathsAdmin' => $popularPathsAdmin,
+                'kpiFormulas' => $kpiFormulas,
             ],
             'pendingApprovals' => $pendingApprovals,
         ]);

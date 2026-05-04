@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Rental extends Model
 {
+    /** @use HasFactory<\Database\Factories\RentalFactory> */
+    use HasFactory;
+
     /**
      * Model defaults. `is_telemetry_active`: when false, simulation worker/schedule skips this rental (no auto metrics); monitor and manual actuators still work.
      *

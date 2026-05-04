@@ -138,10 +138,22 @@ class UserDashboardDataService
                 COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('".implode("','", $txGroups['success'])."') THEN transactions.amount ELSE 0 END), 0) as paid_amount,
                 COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('".implode("','", $txGroups['pending'])."') THEN transactions.amount ELSE 0 END), 0) as pending_amount,
                 COALESCE(SUM(CASE WHEN LOWER(transactions.status) IN ('".implode("','", $txGroups['failure'])."') THEN transactions.amount ELSE 0 END), 0) as failed_amount,
+                COUNT(CASE WHEN LOWER(transactions.status) IN ('".implode("','", $txGroups['success'])."') THEN 1 END) as paid_tx_count,
                 COUNT(CASE WHEN LOWER(transactions.status) IN ('pending','processing') THEN 1 END) as pending_count,
                 COUNT(CASE WHEN LOWER(transactions.status) = 'failed' THEN 1 END) as failed_count,
                 MAX(transactions.transaction_date) as last_transaction_at
             ")
+            ->first();
+
+        $earnedRentals = Rental::query()
+            ->leftJoinSub($paidTxSub, 'paid_tx', 'paid_tx.rental_id', '=', 'rentals.id')
+            ->where('rentals.user_id', $user->id)
+            ->whereRaw('LOWER(rentals.status) = ?', ['completed'])
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(rentals.payment_status) = ?', ['paid'])
+                    ->orWhereNotNull('paid_tx.rental_id');
+            })
+            ->selectRaw('COALESCE(SUM(rentals.price), 0) as earned_sum, COUNT(*) as earned_count')
             ->first();
 
         $lastRejectedApprovalAt = Rental::query()
@@ -149,7 +161,7 @@ class UserDashboardDataService
             ->whereRaw('LOWER(payment_status) = ?', ['rejected_by_approval'])
             ->max('updated_at');
 
-        $lastTransactionAt = $financialOverview->last_transaction_at ?? null;
+        $lastTransactionAt = $financialOverview?->last_transaction_at ?? null;
         if ($lastRejectedApprovalAt !== null) {
             $lastTransactionAt = $lastTransactionAt === null
                 ? $lastRejectedApprovalAt
@@ -397,11 +409,15 @@ class UserDashboardDataService
             'recentActivities' => $recentActivities,
             'userCountryName' => $user->country?->name,
             'financialOverview' => [
-                'paidAmount' => (float) ($financialOverview->paid_amount ?? 0),
-                'pendingAmount' => (float) ($financialOverview->pending_amount ?? 0) + $syntheticPendingApprovalAmount,
-                'failedAmount' => (float) (($financialOverview->failed_amount ?? 0) + $rejectedApproval['lostRevenuePriceSum']),
-                'pendingCount' => (int) ($financialOverview->pending_count ?? 0) + $syntheticPendingApprovalCount,
-                'failedCount' => (int) (($financialOverview->failed_count ?? 0) + $rejectedApproval['count']),
+                'earnedRevenueAmount' => (float) ($earnedRentals?->earned_sum ?? 0),
+                'earnedRentalsCount' => (int) ($earnedRentals?->earned_count ?? 0),
+                'paidTransactionsAmount' => (float) ($financialOverview?->paid_amount ?? 0),
+                'paidTransactionsCount' => (int) ($financialOverview?->paid_tx_count ?? 0),
+                'paidAmount' => (float) ($earnedRentals?->earned_sum ?? 0),
+                'pendingAmount' => (float) ($financialOverview?->pending_amount ?? 0) + $syntheticPendingApprovalAmount,
+                'failedAmount' => (float) (($financialOverview?->failed_amount ?? 0) + $rejectedApproval['lostRevenuePriceSum']),
+                'pendingCount' => (int) ($financialOverview?->pending_count ?? 0) + $syntheticPendingApprovalCount,
+                'failedCount' => (int) (($financialOverview?->failed_count ?? 0) + $rejectedApproval['count']),
                 'lastTransactionAt' => $lastTransactionAt,
             ],
             'transactionsByStatus' => $transactionsByStatus,

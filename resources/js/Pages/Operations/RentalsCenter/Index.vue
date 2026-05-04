@@ -283,8 +283,8 @@ const closeReasonModal = () => {
             <PageHeader eyebrow="Operations" title="Rentals center">
                 <template #aside>
                     <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                        Live view of all rental operations
-                    </span>
+                    Live view of all rental operations
+                </span>
                 </template>
             </PageHeader>
         </template>

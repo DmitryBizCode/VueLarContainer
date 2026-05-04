@@ -45,10 +45,6 @@ Route::post('/contact', [InquiryController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('contact.submit');
 
-Route::get('/test-vue', function () {
-    return Inertia::render('TestVue');
-})->name('test.vue');
-
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');

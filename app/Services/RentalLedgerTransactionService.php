@@ -80,10 +80,6 @@ class RentalLedgerTransactionService
 
     private function isEligibleForLedgerEntry(Rental $rental): bool
     {
-        if ($rental->payment_approved_at !== null) {
-            return true;
-        }
-
         return strtolower((string) $rental->payment_status) === 'paid';
     }
 

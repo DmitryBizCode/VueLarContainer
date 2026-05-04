@@ -3,22 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Events\InquirySubmitted;
+use App\Http\Requests\StoreInquiryRequest;
 use App\Models\Inquiry;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class InquiryController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(StoreInquiryRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:255'],
-            'subject' => ['required', 'string', 'max:255'],
-            'message' => ['required', 'string', 'max:20000'],
-            'website' => ['prohibited'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $inquiry = Inquiry::query()->create([

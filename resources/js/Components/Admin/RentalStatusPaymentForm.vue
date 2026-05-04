@@ -13,6 +13,8 @@ const props = defineProps({
     hidePaymentStatus: { type: Boolean, default: false },
 });
 
+const emit = defineEmits(['success']);
+
 const showConfirmModal = ref(false);
 
 const form = useForm({
@@ -56,7 +58,10 @@ const submit = () => {
     }
     router.patch(route('admin.rentals.status', props.rentalId), payload, {
         preserveScroll: true,
-        onSuccess: () => { showConfirmModal.value = false; },
+        onSuccess: () => {
+            showConfirmModal.value = false;
+            emit('success');
+        },
     });
 };
 

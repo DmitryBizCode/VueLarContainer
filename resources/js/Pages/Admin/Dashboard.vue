@@ -68,6 +68,9 @@ const formatDate = (v) =>
                         <p class="text-xs font-semibold uppercase text-slate-500">Finance (pending)</p>
                         <p class="mt-1 text-xl font-bold text-amber-700">{{ formatMoney(props.stats.pendingAmount) }}</p>
                         <p class="mt-1 text-xs text-slate-600">{{ props.stats.pendingCount ?? 0 }} transactions</p>
+                        <p v-if="(props.stats.awaitingCaptureCount ?? 0) > 0" class="mt-1 text-[11px] text-slate-500">
+                            Awaiting capture: <span class="font-semibold text-slate-700">{{ props.stats.awaitingCaptureCount }}</span> · {{ formatMoney(props.stats.awaitingCaptureAmount) }}
+                        </p>
                     </div>
                     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <p class="text-xs font-semibold uppercase text-slate-500">Activity logs</p>
@@ -81,6 +84,37 @@ const formatDate = (v) =>
                         <Link :href="route('admin.request-logs.index')" class="mt-1 inline-block text-xs font-semibold text-blue-600 hover:underline">View logs & analytics →</Link>
                     </div>
                 </div>
+
+                <section v-if="props.stats.kpiFormulas" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-900">Finance formulas</h2>
+                    <p class="mt-1 text-xs text-slate-500">Quick indicators (success tx unless noted).</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">Rolling 30d</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.kpiFormulas.rolling30dAmount) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">YTD</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.kpiFormulas.ytdAmount) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">QoQ change</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ (props.stats.kpiFormulas.qoqChangePercent ?? 0) >= 0 ? '+' : '' }}{{ props.stats.kpiFormulas.qoqChangePercent ?? 0 }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">Success rate (30d)</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ props.stats.kpiFormulas.successRate30d ?? 0 }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">Avg ticket (this month)</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.kpiFormulas.avgTicketThisMonth) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                            <p class="text-xs font-semibold text-slate-500">P95 ticket (30d)</p>
+                            <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.stats.kpiFormulas.p95Ticket30d) }}</p>
+                        </div>
+                    </div>
+                </section>
 
                 <section v-if="props.stats.rejectedApproval" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">

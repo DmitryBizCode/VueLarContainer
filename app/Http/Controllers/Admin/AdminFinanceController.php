@@ -44,12 +44,13 @@ class AdminFinanceController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'q' => ['nullable', 'string', 'max:100'],
-            'staff_sort_by' => ['nullable', 'string', 'in:name,approved_count,approved_sum,commission,bonus'],
+            'staff_sort_by' => ['nullable', 'string', 'in:name,approved_count,approved_sum,rental_review_count,rental_review_sum,payment_auth_count,payment_auth_sum,commission,bonus'],
             'staff_sort_order' => ['nullable', 'string', 'in:asc,desc'],
             'transaction_sort_by' => ['nullable', 'string', 'in:id,rental_id,amount,status,transaction_date'],
             'transaction_sort_order' => ['nullable', 'string', 'in:asc,desc'],
             'report_date_from' => ['nullable', 'date'],
             'report_date_to' => ['nullable', 'date', 'after_or_equal:report_date_from'],
+            'section' => ['nullable', 'string', 'max:64'],
         ]);
 
         $baseQuery = Transaction::query()->join('rentals', 'rentals.id', '=', 'transactions.rental_id');
@@ -136,10 +137,12 @@ class AdminFinanceController extends Controller
                 'rentals.id'
             )
             ->selectRaw("
-                COALESCE(SUM(CASE WHEN LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL THEN rentals.price ELSE 0 END), 0) as revenue_paid,
-                COALESCE(SUM(CASE WHEN LOWER(rentals.payment_status) NOT IN ('paid') AND paid_tx.rental_id IS NULL THEN rentals.price ELSE 0 END), 0) as revenue_pending,
-                COUNT(CASE WHEN LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL THEN 1 END) as rentals_paid_count,
-                COUNT(CASE WHEN LOWER(rentals.payment_status) NOT IN ('paid') AND paid_tx.rental_id IS NULL THEN 1 END) as rentals_pending_count,
+                COALESCE(SUM(CASE WHEN LOWER(rentals.status) = 'completed' AND (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN rentals.price ELSE 0 END), 0) as revenue_paid,
+                COALESCE(SUM(CASE WHEN LOWER(rentals.status) = 'completed' AND NOT (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN rentals.price ELSE 0 END), 0) as revenue_pending,
+                COALESCE(SUM(CASE WHEN LOWER(rentals.status) <> 'completed' AND (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN rentals.price ELSE 0 END), 0) as revenue_booked,
+                COUNT(CASE WHEN LOWER(rentals.status) = 'completed' AND (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN 1 END) as rentals_paid_count,
+                COUNT(CASE WHEN LOWER(rentals.status) = 'completed' AND NOT (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN 1 END) as rentals_pending_count,
+                COUNT(CASE WHEN LOWER(rentals.status) <> 'completed' AND (LOWER(rentals.payment_status) = 'paid' OR paid_tx.rental_id IS NOT NULL) THEN 1 END) as rentals_booked_count,
                 COUNT(*) as rentals_total
             ")
             ->first();
@@ -160,6 +163,7 @@ class AdminFinanceController extends Controller
                 'id' => $r->id,
                 'status' => $r->status,
                 'payment_status' => $r->payment_status,
+                'payment_approved_at' => $r->payment_approved_at?->toISOString(),
                 'price' => (float) $r->price,
                 'created_at' => $r->created_at?->toISOString(),
                 'customer' => trim(($r->user?->first_name ?? '').' '.($r->user?->last_name ?? '')) ?: $r->user?->email ?? '—',
@@ -195,6 +199,7 @@ class AdminFinanceController extends Controller
             ->limit(30)
             ->get()
             ->map(fn (Transaction $t) => [
+                'row_kind' => 'psp_transaction',
                 'id' => $t->id,
                 'rental_id' => $t->rental_id,
                 'amount' => (float) $t->amount,
@@ -205,6 +210,52 @@ class AdminFinanceController extends Controller
                     'container' => $t->rental->container?->serial_number,
                 ] : null,
             ]);
+
+        $awaitingCaptureRentals = [];
+        if (Schema::hasColumn('rentals', 'payment_approved_at')) {
+            $awaitingCaptureRentals = Rental::query()
+                ->with(['user:id,first_name,last_name,email', 'container:id,serial_number', 'originPort:id,name', 'destinationPort:id,name'])
+                ->whereNotNull('payment_approved_at')
+                ->whereRaw("LOWER(payment_status) IN ('pending', 'unpaid')")
+                ->whereNotExists(function ($q) {
+                    $q->selectRaw('1')
+                        ->from('transactions')
+                        ->whereColumn('transactions.rental_id', 'rentals.id')
+                        ->whereRaw("LOWER(transactions.status) IN ('pending','processing')");
+                })
+                ->orderByDesc('payment_approved_at')
+                ->limit(50)
+                ->get()
+                ->map(fn (Rental $r) => [
+                    'row_kind' => 'awaiting_capture',
+                    'id' => 'awaiting-capture:'.$r->id,
+                    'rental_id' => $r->id,
+                    'amount' => (float) $r->price,
+                    'currency' => 'USD',
+                    'status' => 'awaiting_capture',
+                    'rental' => [
+                        'customer' => trim(($r->user?->first_name ?? '').' '.($r->user?->last_name ?? '')) ?: $r->user?->email ?? '—',
+                        'container' => $r->container?->serial_number,
+                        'origin' => $r->originPort?->name,
+                        'destination' => $r->destinationPort?->name,
+                    ],
+                ])
+                ->all();
+        }
+
+        $awaitingCaptureSummary = ['count' => 0, 'amount' => 0.0];
+        if (Schema::hasColumn('rentals', 'payment_approved_at')) {
+            $awaitingCaptureSummary = [
+                'count' => (int) Rental::query()
+                    ->whereNotNull('payment_approved_at')
+                    ->whereRaw("LOWER(payment_status) IN ('pending', 'unpaid')")
+                    ->count(),
+                'amount' => (float) Rental::query()
+                    ->whereNotNull('payment_approved_at')
+                    ->whereRaw("LOWER(payment_status) IN ('pending', 'unpaid')")
+                    ->sum('price'),
+            ];
+        }
 
         $query = Transaction::query()->with('rental.user');
         $txSortBy = $validated['transaction_sort_by'] ?? 'transaction_date';
@@ -271,6 +322,8 @@ class AdminFinanceController extends Controller
             ])
             ->map(fn ($r) => [
                 'id' => $syntheticLedgerPrefix.(int) $r->id.':rejected_by_approval',
+                'display_title' => 'Rental #'.(int) $r->id.' — Rejected by approval',
+                'display_kind' => 'rejected_by_approval',
                 'rental_id' => (int) $r->id,
                 'amount' => (float) ($r->price ?? 0),
                 'currency' => 'USD',
@@ -305,6 +358,8 @@ class AdminFinanceController extends Controller
             ])
             ->map(fn ($r) => [
                 'id' => $syntheticLedgerPrefix.(int) $r->id.':pending_approval',
+                'display_title' => 'Rental #'.(int) $r->id.' — Awaiting rental approval',
+                'display_kind' => 'pending_approval',
                 'rental_id' => (int) $r->id,
                 'amount' => (float) ($r->price ?? 0),
                 'currency' => 'USD',
@@ -312,7 +367,7 @@ class AdminFinanceController extends Controller
                 'payment_method' => 'approval_pending',
                 'external_provider_id' => $syntheticLedgerPrefix.(int) $r->id,
                 'transaction_date' => Carbon::parse($r->updated_at ?? $r->created_at)->toISOString(),
-                'status_note' => 'Awaiting approval',
+                'status_note' => 'Awaiting rental approval (no payment attempt yet)',
                 'refund_reason' => null,
                 'rental_status' => 'pending_approval',
                 'rental_payment_status' => (string) ($r->payment_status ?? 'pending'),
@@ -326,12 +381,17 @@ class AdminFinanceController extends Controller
             return strcmp((string) ($b['transaction_date'] ?? ''), (string) ($a['transaction_date'] ?? ''));
         });
 
-        $chartData = Cache::remember('admin_finance:chart_data:v1', now()->addMinutes(5), fn () => $this->financeAnalytics->buildChartData());
+        $chartData = Cache::remember('admin_finance:chart_data:v2', now()->addMinutes(5), fn () => $this->financeAnalytics->buildChartData());
         $chartPaymentMethods = Cache::remember('admin_finance:chart_payment_methods:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartPaymentMethods());
         $chartByRoute = Cache::remember('admin_finance:chart_by_route:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartByRoute());
         $chartTopContainers = Cache::remember('admin_finance:chart_top_containers:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartTopContainers());
         $failedTrend = Cache::remember('admin_finance:failed_trend:v1', now()->addMinutes(5), fn () => $this->financeAnalytics->buildFailedTrend());
         $yoyMom = Cache::remember('admin_finance:yoy_mom:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildYoyMom());
+        $kpiFormulas = Cache::remember('admin_finance:kpi_formulas:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildKpiFormulas());
+        $successRateTrend = Cache::remember('admin_finance:success_rate_trend:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildSuccessRateTrend());
+        $avgTicketTrend = Cache::remember('admin_finance:avg_ticket_trend:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildAvgTicketTrend());
+        $paymentMethodTrend = Cache::remember('admin_finance:payment_method_trend:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildPaymentMethodTrend());
+        $routeTrend = Cache::remember('admin_finance:route_trend:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildRouteTrend());
         $dailyBreakdown = Cache::remember('admin_finance:daily_breakdown:v1', now()->addMinutes(5), fn () => $this->financeAnalytics->buildDailyBreakdown());
         $metrics = Cache::remember('admin_finance:metrics:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildMetrics());
 
@@ -382,6 +442,7 @@ class AdminFinanceController extends Controller
                 'staff_sort_order' => $validated['staff_sort_order'] ?? null,
                 'transaction_sort_by' => $validated['transaction_sort_by'] ?? null,
                 'transaction_sort_order' => $validated['transaction_sort_order'] ?? null,
+                'section' => $validated['section'] ?? null,
             ],
             'overview' => [
                 'paidAmount' => (float) ($overview->paid_amount ?? 0),
@@ -399,8 +460,10 @@ class AdminFinanceController extends Controller
             'rentalsSummary' => [
                 'revenuePaid' => (float) ($rentalsSummary->revenue_paid ?? 0),
                 'revenuePending' => (float) ($rentalsSummary->revenue_pending ?? 0),
+                'revenueBooked' => (float) ($rentalsSummary->revenue_booked ?? 0),
                 'rentalsPaidCount' => (int) ($rentalsSummary->rentals_paid_count ?? 0),
                 'rentalsPendingCount' => (int) ($rentalsSummary->rentals_pending_count ?? 0),
+                'rentalsBookedCount' => (int) ($rentalsSummary->rentals_booked_count ?? 0),
                 'rentalsTotal' => (int) ($rentalsSummary->rentals_total ?? 0),
             ],
             'containersSummary' => $containersSummary,
@@ -410,11 +473,18 @@ class AdminFinanceController extends Controller
             'chartTopContainers' => $chartTopContainers,
             'failedTrend' => $failedTrend,
             'yoyMom' => $yoyMom,
+            'kpiFormulas' => $kpiFormulas,
+            'successRateTrend' => $successRateTrend,
+            'avgTicketTrend' => $avgTicketTrend,
+            'paymentMethodTrend' => $paymentMethodTrend,
+            'routeTrend' => $routeTrend,
             'dailyBreakdown' => $dailyBreakdown,
             'metrics' => $metrics,
             'pendingOrders' => $pendingOrders,
             'pendingPaymentApprovals' => $pendingPaymentApprovals,
             'pendingTransactions' => $transactionsWithPending,
+            'awaitingCaptureRentals' => $awaitingCaptureRentals,
+            'awaitingCaptureSummary' => $awaitingCaptureSummary,
             'transactions' => $transactions,
             'statusOptions' => $statusOptions,
             'paymentStatusOptions' => $paymentStatusOptions,
@@ -544,7 +614,6 @@ class AdminFinanceController extends Controller
         ];
         $rental->payment_approved_at = now();
         $rental->payment_approved_by = $request->user()->id;
-        $rental->payment_status = 'paid';
         $rental->save();
         $newValues = [
             'payment_approved_at' => $rental->payment_approved_at?->toISOString(),
@@ -559,14 +628,11 @@ class AdminFinanceController extends Controller
             $rental->id,
             $oldValues,
             $newValues,
-            "Rental #{$rental->id} payment approved by ".trim($request->user()->first_name.' '.$request->user()->last_name),
+            "Rental #{$rental->id} payment capture authorized by ".trim($request->user()->first_name.' '.$request->user()->last_name).' (awaiting settlement; payment_status unchanged).',
             $request
         );
 
-        $rental->refresh();
-        app(RentalLedgerTransactionService::class)->syncLedgerTransactionForRental($rental);
-
-        return back()->with('status', "Payment for rental #{$rental->id} approved.");
+        return back()->with('status', "Payment capture authorized for rental #{$rental->id}. Mark as paid when funds are received.");
     }
 
     public function reportExport(Request $request): StreamedResponse|RedirectResponse
@@ -584,9 +650,17 @@ class AdminFinanceController extends Controller
         return response()->streamDownload(function () use ($reportData) {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['Finance report', $reportData['overview']['paidAmount'] ?? 0, $reportData['overview']['pendingAmount'] ?? 0, $reportData['overview']['failedAmount'] ?? 0]);
-            fputcsv($out, ['Staff', 'Approved count', 'Approved sum', 'Commission', 'Bonus']);
+            fputcsv($out, ['Staff', 'Rental reviews (count)', 'Rental reviews (sum)', 'Payment auth (count)', 'Payment auth (sum)', 'Commission', 'Bonus']);
             foreach ($reportData['staffStats'] ?? [] as $row) {
-                fputcsv($out, [$row['name'], $row['approved_count'], $row['approved_sum'], $row['commission'], $row['bonus']]);
+                fputcsv($out, [
+                    $row['name'],
+                    $row['rental_review_count'] ?? $row['approved_count'] ?? 0,
+                    $row['rental_review_sum'] ?? $row['approved_sum'] ?? 0,
+                    $row['payment_auth_count'] ?? 0,
+                    $row['payment_auth_sum'] ?? 0,
+                    $row['commission'],
+                    $row['bonus'],
+                ]);
             }
             fclose($out);
         }, $filename, [

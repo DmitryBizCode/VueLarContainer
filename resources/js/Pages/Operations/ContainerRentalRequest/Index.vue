@@ -460,8 +460,8 @@ const submit = () => {
             <PageHeader eyebrow="Operations" title="Container rental request">
                 <template #aside>
                     <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                        End-to-end request and approval workflow
-                    </span>
+                    End-to-end request and approval workflow
+                </span>
                 </template>
             </PageHeader>
         </template>
@@ -479,12 +479,12 @@ const submit = () => {
                         <div v-show="currentStep === 1">
                             <RequestRouteStep
                                 :form="form"
-                                :routes="props.routes"
-                                :ports="props.ports"
-                                :origin-ports="props.origin_ports"
+                            :routes="props.routes"
+                            :ports="props.ports"
+                            :origin-ports="props.origin_ports"
                                 :routing-priority-options="props.routing_priority_options"
-                                :min-start-date="minStartDate"
-                                :min-end-date="minEndDate"
+                            :min-start-date="minStartDate"
+                            :min-end-date="minEndDate"
                             />
                         </div>
 
@@ -502,8 +502,8 @@ const submit = () => {
                         <RequestPickupStep
                             v-show="currentStep === 3"
                             :form="form"
-                            :countries="props.countries"
-                            :user-country-id="props.user_country_id"
+                                        :countries="props.countries"
+                                        :user-country-id="props.user_country_id"
                             :show-pickup-window="showPickupWindow"
                             @update:show-pickup-window="showPickupWindow = $event"
                         />

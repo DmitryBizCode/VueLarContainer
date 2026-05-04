@@ -12,7 +12,23 @@ const props = defineProps({
 const data = computed(() => ({
     labels: props.chartData.map((d) => d.label),
     datasets: [
-        { label: 'Failed count', data: props.chartData.map((d) => d.count), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', fill: true },
+        {
+            label: 'Failed count',
+            data: props.chartData.map((d) => d.count),
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.16)',
+            fill: true,
+            yAxisID: 'y',
+        },
+        {
+            label: 'Failed amount',
+            data: props.chartData.map((d) => d.amount),
+            borderColor: '#0f172a',
+            backgroundColor: 'rgba(15, 23, 42, 0.08)',
+            fill: false,
+            tension: 0.25,
+            yAxisID: 'y1',
+        },
     ],
 }));
 
@@ -30,7 +46,15 @@ const options = {
             },
         },
     },
-    scales: { y: { beginAtZero: true } },
+    scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+        y1: {
+            beginAtZero: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Amount' },
+        },
+    },
 };
 </script>
 

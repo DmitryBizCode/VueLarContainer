@@ -76,7 +76,7 @@ class FinanceLedgerTransactionTest extends TestCase
         return ['admin' => $admin, 'rental' => $rental, 'client' => $client];
     }
 
-    public function test_approve_payment_creates_synthetic_transaction(): void
+    public function test_approve_payment_authorizes_capture_without_paid_or_ledger(): void
     {
         $ctx = $this->seedRentalEligibleForPaymentApproval();
         $admin = $ctx['admin'];
@@ -84,8 +84,30 @@ class FinanceLedgerTransactionTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.finance.rentals.approve-payment', $rental))->assertRedirect();
 
-        $expectedExternal = 'ledger:rental:'.$rental->id;
+        $this->assertSame(0, Transaction::query()->where('rental_id', $rental->id)->count());
 
+        $rental->refresh();
+        $this->assertNotNull($rental->payment_approved_at);
+        $this->assertSame((int) $admin->id, (int) $rental->payment_approved_by);
+        $this->assertSame('pending', strtolower((string) $rental->payment_status));
+    }
+
+    public function test_marking_rental_paid_after_authorization_creates_synthetic_transaction(): void
+    {
+        $ctx = $this->seedRentalEligibleForPaymentApproval();
+        $admin = $ctx['admin'];
+        $rental = $ctx['rental'];
+
+        $this->actingAs($admin)->post(route('admin.finance.rentals.approve-payment', $rental))->assertRedirect();
+
+        $rental->refresh();
+        $this->assertSame('pending', strtolower((string) $rental->payment_status));
+
+        $this->actingAs($admin)
+            ->patch(route('admin.finance.rentals.payment-status', $rental), ['payment_status' => 'paid'])
+            ->assertRedirect();
+
+        $expectedExternal = 'ledger:rental:'.$rental->id;
         $this->assertDatabaseHas('transactions', [
             'rental_id' => $rental->id,
             'amount' => '1500.00',
@@ -96,7 +118,6 @@ class FinanceLedgerTransactionTest extends TestCase
         ]);
 
         $rental->refresh();
-        $this->assertNotNull($rental->payment_approved_at);
         $this->assertSame('paid', strtolower((string) $rental->payment_status));
     }
 

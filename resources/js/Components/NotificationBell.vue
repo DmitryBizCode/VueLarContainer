@@ -1,7 +1,7 @@
 <script setup>
 import { useToast } from '@/composables/useToast';
 import axios from 'axios';
-import { usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const page = usePage();
@@ -50,21 +50,19 @@ const toggle = async () => {
 };
 
 const markRead = async (note) => {
-    if (!note?.id || note.is_read) {
-        if (note?.action_url) {
-            window.location.href = note.action_url;
-        }
-        return;
-    }
+    if (!note?.id) return;
     try {
-        await axios.patch(route('notifications.read', { notification: note.id }));
-        note.is_read = true;
-        await fetchUnreadCount();
+        if (!note.is_read) {
+            await axios.patch(route('notifications.read', { notification: note.id }));
+            note.is_read = true;
+            await fetchUnreadCount();
+        }
     } catch {
         /* ignore */
     }
     if (note.action_url) {
-        window.location.href = note.action_url;
+        open.value = false;
+        router.visit(note.action_url, { preserveScroll: true });
     }
 };
 

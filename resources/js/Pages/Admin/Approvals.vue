@@ -199,6 +199,7 @@ const returnToPending = () => {
                             current-status="pending_approval"
                             :status-options="statusOptions"
                             hide-payment-status
+                            @success="closeModal"
                         />
                     </div>
 

@@ -48,6 +48,10 @@ const props = defineProps({
     financialOverview: {
         type: Object,
         default: () => ({
+            earnedRevenueAmount: 0,
+            earnedRentalsCount: 0,
+            paidTransactionsAmount: 0,
+            paidTransactionsCount: 0,
             paidAmount: 0,
             pendingAmount: 0,
             failedAmount: 0,
@@ -353,9 +357,14 @@ const markerIconColor = (state) => {
                                                     <path :d="markerIconPath('completed')" />
                                                 </svg>
                                             </span>
-                                            Paid volume
+                                            Earned (completed)
                                         </p>
-                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.paidAmount) }}</p>
+                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.earnedRevenueAmount ?? props.financialOverview.paidAmount) }}</p>
+                                        <p class="text-xs text-slate-500">{{ props.financialOverview.earnedRentalsCount ?? 0 }} rentals</p>
+                                        <p class="mt-1 text-[11px] leading-snug text-slate-500">
+                                            Payment rails: {{ formatMoney(props.financialOverview.paidTransactionsAmount ?? 0) }}
+                                            <span class="tabular-nums">({{ props.financialOverview.paidTransactionsCount ?? 0 }} tx)</span>
+                                        </p>
                                     </div>
                                     <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                                         <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
