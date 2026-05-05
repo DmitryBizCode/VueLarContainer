@@ -149,6 +149,37 @@ class LogisticsMapPayloadService
                 ->map(fn ($rows) => $rows->first())
                 ->all();
 
+        /** @var array<int, list<object>> Shipment rows per rental, ordered by leg_sequence (for per-leg port popup dates). */
+        $shipmentsByRentalId = [];
+        if ($rentalIds !== []) {
+            $shipRows = ShipmentItem::query()
+                ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
+                ->whereIn('shipment_items.rental_id', $rentalIds)
+                ->orderBy('shipment_items.rental_id')
+                ->orderBy('shipments.leg_sequence')
+                ->get([
+                    'shipment_items.rental_id',
+                    'shipments.route_id',
+                    'shipments.leg_sequence',
+                    'shipments.status',
+                    'shipments.departure_date',
+                    'shipments.actual_departure_date',
+                    'shipments.arrival_date',
+                    'shipments.actual_arrival_date',
+                    'shipments.port_operations_until',
+                ]);
+            foreach ($shipRows as $row) {
+                $rid = (int) $row->rental_id;
+                if (! isset($shipmentsByRentalId[$rid])) {
+                    $shipmentsByRentalId[$rid] = [];
+                }
+                $shipmentsByRentalId[$rid][] = $row;
+            }
+        }
+
+        /** @var array<int, list<array{rental_id:int, container_serial:string, summary:string, sub:string}>> */
+        $activitiesByPortId = [];
+
         /** @var array<int, ShippingRoute|null> */
         $routeByIdCache = [];
 
@@ -378,6 +409,17 @@ class LogisticsMapPayloadService
                 }
             }
 
+            $this->appendRentalPortActivities(
+                $activitiesByPortId,
+                $rental,
+                $routeLegs,
+                $originPort,
+                $destinationPort,
+                $shipRow,
+                $shippingPhase,
+                $shipmentsByRentalId[(int) $rental->id] ?? []
+            );
+
             $positions[] = [
                 'rental_id' => $rental->id,
                 'container_serial' => $rental->container?->serial_number,
@@ -602,6 +644,15 @@ class LogisticsMapPayloadService
             ];
         }
 
+        $ports = $ports->map(function (array $p) use ($activitiesByPortId) {
+            $pid = (int) $p['id'];
+            if (isset($activitiesByPortId[$pid]) && $activitiesByPortId[$pid] !== []) {
+                $p['activities'] = array_values($activitiesByPortId[$pid]);
+            }
+
+            return $p;
+        })->values();
+
         return [
             'ports' => $ports,
             'route_edges' => $routeEdges,
@@ -610,5 +661,220 @@ class LogisticsMapPayloadService
             'rental_route_segments' => $rentalRouteSegments,
             'is_ops_view' => false,
         ];
+    }
+
+    /**
+     * @param  array<int, list<array{rental_id:int, container_serial:string, summary:string, sub:string}>>  $activitiesByPortId
+     * @param  list<array<string, mixed>>  $routeLegs
+     * @param  list<object>  $shipList  Shipment join rows for this rental (same shape as shipmentsByRentalId values).
+     */
+    private function appendRentalPortActivities(
+        array &$activitiesByPortId,
+        Rental $rental,
+        array $routeLegs,
+        ?Port $originPort,
+        ?Port $destinationPort,
+        ?object $shipRow,
+        string $shippingPhase,
+        array $shipList,
+    ): void {
+        $rentalId = (int) $rental->id;
+        $serial = (string) ($rental->container?->serial_number ?? '—');
+        $sub = $this->mapActivitySub((string) $rental->status, (string) $rental->payment_status, $shippingPhase);
+
+        $findShipForRoute = static function (int $routeId) use ($shipList): ?object {
+            if ($routeId <= 0) {
+                return null;
+            }
+            foreach ($shipList as $sr) {
+                if ((int) ($sr->route_id ?? 0) === $routeId) {
+                    return $sr;
+                }
+            }
+
+            return null;
+        };
+
+        if ($routeLegs !== []) {
+            $last = count($routeLegs) - 1;
+            foreach ($routeLegs as $i => $leg) {
+                $oid = (int) ($leg['origin_port_id'] ?? 0);
+                $did = (int) ($leg['destination_port_id'] ?? 0);
+                $oname = (string) ($leg['origin_name'] ?? 'Port');
+                $dname = (string) ($leg['destination_name'] ?? 'Port');
+                $legRouteId = (int) ($leg['route_id'] ?? 0);
+                $sLeg = $findShipForRoute($legRouteId);
+                $etdRaw = $sLeg !== null
+                    ? ($sLeg->actual_departure_date ?? $sLeg->departure_date ?? null)
+                    : null;
+                $etaRaw = $sLeg !== null
+                    ? ($sLeg->actual_arrival_date ?? $sLeg->arrival_date ?? null)
+                    : null;
+                $etdS = $etdRaw !== null ? $this->mapShortDate(CarbonImmutable::parse((string) $etdRaw)) : 'TBC';
+                $etaS = $etaRaw !== null ? $this->mapShortDate(CarbonImmutable::parse((string) $etaRaw)) : 'TBC';
+
+                $dShort = $this->mapPortShortLabel($dname);
+                $nextDestShort = isset($routeLegs[$i + 1]) ? $this->mapPortShortLabel((string) ($routeLegs[$i + 1]['destination_name'] ?? '…')) : '…';
+                if ($i === 0 && $oid > 0) {
+                    $this->pushPortActivity(
+                        $activitiesByPortId,
+                        $oid,
+                        $rentalId,
+                        $serial,
+                        "#{$rentalId} · {$this->mapSerialShort($serial)} · to {$dShort} · ETD {$etdS}",
+                        $sub
+                    );
+                }
+                if ($i < $last && $did > 0) {
+                    $ops = '';
+                    if ($sLeg !== null && ! empty($sLeg->port_operations_until)) {
+                        $ops = ' · ops '.$this->mapShortDate(CarbonImmutable::parse((string) $sLeg->port_operations_until));
+                    }
+                    $this->pushPortActivity(
+                        $activitiesByPortId,
+                        $did,
+                        $rentalId,
+                        $serial,
+                        "#{$rentalId} · hub {$dShort} → {$nextDestShort}{$ops}",
+                        $sub
+                    );
+                }
+                if ($i === $last && $did > 0) {
+                    $this->pushPortActivity(
+                        $activitiesByPortId,
+                        $did,
+                        $rentalId,
+                        $serial,
+                        "#{$rentalId} · {$this->mapSerialShort($serial)} · {$dShort} · ETA {$etaS}",
+                        $sub
+                    );
+                }
+            }
+
+            return;
+        }
+
+        $oname = (string) ($originPort?->name ?? 'Origin');
+        $dname = (string) ($destinationPort?->name ?? 'Destination');
+        $oShort = $this->mapPortShortLabel($oname);
+        $dShort = $this->mapPortShortLabel($dname);
+        $oid = (int) ($originPort?->id ?? 0);
+        $did = (int) ($destinationPort?->id ?? 0);
+
+        $etdRaw = $shipRow !== null
+            ? ($shipRow->actual_departure_date ?? $shipRow->departure_date ?? null)
+            : null;
+        $etaRaw = $shipRow !== null
+            ? ($shipRow->actual_arrival_date ?? $shipRow->arrival_date ?? null)
+            : null;
+        if ($etdRaw === null && $rental->start_date !== null) {
+            $etdRaw = $rental->start_date;
+        }
+        if ($etaRaw === null && $rental->end_date !== null) {
+            $etaRaw = $rental->end_date;
+        }
+        $etdS = $etdRaw !== null ? $this->mapShortDate(CarbonImmutable::parse((string) $etdRaw)) : 'TBC';
+        $etaS = $etaRaw !== null ? $this->mapShortDate(CarbonImmutable::parse((string) $etaRaw)) : 'TBC';
+
+        if ($oid > 0) {
+            $this->pushPortActivity(
+                $activitiesByPortId,
+                $oid,
+                $rentalId,
+                $serial,
+                "#{$rentalId} · {$this->mapSerialShort($serial)} · to {$dShort} · ETD {$etdS}",
+                $sub
+            );
+        }
+        if ($did > 0) {
+            $this->pushPortActivity(
+                $activitiesByPortId,
+                $did,
+                $rentalId,
+                $serial,
+                "#{$rentalId} · {$this->mapSerialShort($serial)} · from {$oShort} · ETA {$etaS}",
+                $sub
+            );
+        }
+    }
+
+    /**
+     * @param  array<int, list<array{rental_id:int, container_serial:string, summary:string, sub:string}>>  $activitiesByPortId
+     */
+    private function pushPortActivity(
+        array &$activitiesByPortId,
+        int $portId,
+        int $rentalId,
+        string $containerSerial,
+        string $summary,
+        string $sub,
+    ): void {
+        if ($portId <= 0) {
+            return;
+        }
+        if (! isset($activitiesByPortId[$portId])) {
+            $activitiesByPortId[$portId] = [];
+        }
+        foreach ($activitiesByPortId[$portId] as $existing) {
+            if ((int) $existing['rental_id'] === $rentalId && $existing['summary'] === $summary) {
+                return;
+            }
+        }
+        $activitiesByPortId[$portId][] = [
+            'rental_id' => $rentalId,
+            'container_serial' => $containerSerial,
+            'summary' => $summary,
+            'sub' => $sub,
+        ];
+    }
+
+    private function mapShortDate(CarbonImmutable $dt): string
+    {
+        return $dt->format('j M');
+    }
+
+    private function mapPortShortLabel(string $name): string
+    {
+        $s = preg_replace('/^Port of /i', '', trim($name)) ?? $name;
+        if (strlen($s) > 16) {
+            $s = substr($s, 0, 14).'~';
+        }
+
+        return $s;
+    }
+
+    private function mapSerialShort(string $serial): string
+    {
+        if ($serial === '' || $serial === '—') {
+            return '—';
+        }
+        if (strlen($serial) <= 18) {
+            return $serial;
+        }
+
+        return substr($serial, 0, 16).'~';
+    }
+
+    private function mapActivitySub(string $rentalStatus, string $paymentStatus, string $shippingPhase): string
+    {
+        $ps = strtolower(str_replace('_', ' ', $paymentStatus));
+        $payLabel = match (true) {
+            str_contains($ps, 'paid') => 'paid',
+            str_contains($ps, 'pend') => 'pending',
+            str_contains($ps, 'unpaid') => 'unpaid',
+            str_contains($ps, 'reject') => 'rejected',
+            str_contains($ps, 'await') => 'pending',
+            str_contains($ps, 'cancel') => 'cancelled',
+            default => 'other',
+        };
+        $phLabel = match (strtolower($shippingPhase)) {
+            'in_transit' => 'at sea',
+            'pre_departure', 'at_port' => 'await sailing',
+            'at_destination' => 'arrived',
+            'post_arrival' => 'unloaded',
+            default => 'active',
+        };
+
+        return "{$phLabel} · {$payLabel}";
     }
 }

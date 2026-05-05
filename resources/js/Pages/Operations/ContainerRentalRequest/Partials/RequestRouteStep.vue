@@ -26,6 +26,10 @@ defineProps({
         type: String,
         required: true,
     },
+    maxStartDate: {
+        type: String,
+        default: '',
+    },
     minEndDate: {
         type: String,
         required: true,
@@ -47,6 +51,7 @@ defineProps({
             :end-date="form.end_date"
             :requested-weight="form.requested_weight"
             :min-start-date="minStartDate"
+            :max-start-date="maxStartDate"
             :min-end-date="minEndDate"
             @update:route-mode="form.route_mode = $event"
             @update:route-id="form.route_id = $event"

@@ -19,6 +19,7 @@ use App\Services\MonitorChartsService;
 use App\Services\Notifications\NotificationService;
 use App\Services\RentalPricingService;
 use App\Services\RentalRouteFeasibilityService;
+use App\Services\RoutePathfinderService;
 use App\Services\RouteValidationService;
 use App\Services\TelemetryAnalyticsService;
 use App\Services\VesselPortScheduleService;
@@ -43,6 +44,7 @@ class RentalController extends Controller
         private readonly VesselPortScheduleService $vesselSchedule,
         private readonly RouteValidationService $routeValidation,
         private readonly RentalRouteFeasibilityService $feasibility,
+        private readonly RoutePathfinderService $pathfinder,
     ) {}
 
     public function index(): RedirectResponse
@@ -73,10 +75,18 @@ class RentalController extends Controller
             ->orderBy('name')
             ->get();
 
-        $readyOriginPortIds = $this->availabilityService->portIdsWithAvailableContainerAtPort();
-        $originPorts = $readyOriginPortIds === []
-            ? collect()
-            : $ports->whereIn('id', $readyOriginPortIds)->values();
+        $portSchedules = $this->availabilityService->portSchedulesWithAvailableContainers();
+        $scheduleByPortId = collect($portSchedules)->keyBy('port_id');
+        $showAllOpenRoutes = (bool) config('logistics.rental_request_show_all_open_routes', false);
+        if (! $showAllOpenRoutes) {
+            // Match route list: origins already have at least one available container.
+            $originPortIds = $routes->pluck('origin_port_id')->unique()->filter()->map(fn ($id) => (int) $id)->values()->all();
+            $originPorts = $ports->whereIn('id', $originPortIds)->values();
+        } else {
+            $originPorts = $scheduleByPortId->isEmpty()
+                ? collect()
+                : $ports->whereIn('id', $scheduleByPortId->keys()->all())->values();
+        }
 
         // User-only on non-admin pages: do not show other users' pending approvals.
         $pendingApprovals = collect([]);
@@ -131,6 +141,7 @@ class RentalController extends Controller
                 'latitude' => $port->latitude !== null ? (float) $port->latitude : null,
                 'longitude' => $port->longitude !== null ? (float) $port->longitude : null,
                 'label' => sprintf('%s, %s', $port->name, $port->country?->name ?? 'N/A'),
+                'vessel_departure_at' => $scheduleByPortId->get($port->id)['vessel_departure_at'] ?? null,
             ])->values()->all(),
             'cargo_types' => [
                 ['value' => 'electronics', 'label' => 'Electronics'],
@@ -165,6 +176,8 @@ class RentalController extends Controller
                 'port_operations_max_days' => (int) config('logistics.port_operations_max_days', 4),
                 'post_arrival_min_days' => (int) config('logistics.post_arrival_min_days', 1),
                 'loading_buffer_days' => 3,
+                'time_load_days' => (int) config('logistics.port_operations_min_days', 2),
+                'time_unload_days' => (int) config('logistics.post_arrival_min_days', 1),
             ],
             'routing_priority_options' => [
                 ['value' => '', 'label' => 'Auto (from SLA priority)'],
@@ -196,6 +209,18 @@ class RentalController extends Controller
                 'container_iot_active' => (bool) ($rental->container?->iot_active ?? false),
                 'can_view_iot_monitor' => $rental->canAccessIotMonitor() && (bool) ($rental->container?->iot_active ?? false),
             ]),
+        ]);
+    }
+
+    public function reachableDestinations(Request $request): JsonResponse
+    {
+        $originPortId = (int) $request->query('origin_port_id', 0);
+        if ($originPortId <= 0) {
+            return response()->json(['port_ids' => []]);
+        }
+
+        return response()->json([
+            'port_ids' => $this->pathfinder->reachablePortIds($originPortId),
         ]);
     }
 

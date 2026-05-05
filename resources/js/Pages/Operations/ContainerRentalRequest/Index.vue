@@ -229,6 +229,19 @@ const estimatedDaysFromRoute = computed(() => {
 
 const minStartDate = computed(() => addUtcCalendarDays(new Date().toISOString().slice(0, 10), LOADING_BUFFER_DAYS));
 
+const selectedOriginPort = computed(() => {
+    if (!form.origin_port_id || form.route_mode !== 'ports') return null;
+    return (props.origin_ports || []).find((p) => String(p.id) === String(form.origin_port_id)) ?? null;
+});
+
+const maxStartDate = computed(() => {
+    const port = selectedOriginPort.value;
+    if (!port?.vessel_departure_at) return '';
+    const timeLoadDays = props.logistics_config?.time_load_days ?? 2;
+    const departureDate = new Date(port.vessel_departure_at).toISOString().slice(0, 10);
+    return addUtcCalendarDays(departureDate, -timeLoadDays);
+});
+
 const minEndSpanDays = computed(() => {
     const span = Number(previewState.routeContext?.min_rental_span_days);
     if (!Number.isNaN(span) && span > 0) {
@@ -479,12 +492,13 @@ const submit = () => {
                         <div v-show="currentStep === 1">
                             <RequestRouteStep
                                 :form="form"
-                            :routes="props.routes"
-                            :ports="props.ports"
-                            :origin-ports="props.origin_ports"
+                                :routes="props.routes"
+                                :ports="props.ports"
+                                :origin-ports="props.origin_ports"
                                 :routing-priority-options="props.routing_priority_options"
-                            :min-start-date="minStartDate"
-                            :min-end-date="minEndDate"
+                                :min-start-date="minStartDate"
+                                :max-start-date="maxStartDate"
+                                :min-end-date="minEndDate"
                             />
                         </div>
 

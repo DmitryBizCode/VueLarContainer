@@ -21,12 +21,11 @@ use Illuminate\Support\Str;
  */
 class DemoRentalsBulkSeeder extends Seeder
 {
-    public const BULK_COUNT = 48;
+    public const BULK_COUNT = 56;
 
     public function run(): void
     {
         $admin = User::query()->where('email', 'romeobackend@gmail.com')->first();
-        $paymentApprover = User::query()->where('email', 'admin2@demo.local')->first() ?? $admin;
         $clients = [
             User::query()->where('email', 'demo@example.com')->first(),
             User::query()->where('email', 'client2@demo.local')->first(),
@@ -131,7 +130,7 @@ class DemoRentalsBulkSeeder extends Seeder
 
             $status = $spec['status'];
             $paymentStatus = $spec['payment_status'];
-            $reviewedBy = in_array($status, ['pending_approval'], true) ? null : (($idx % 5 === 0) ? $paymentApprover->id : $admin->id);
+            $reviewedBy = in_array($status, ['pending_approval'], true) ? null : $admin->id;
             $reviewedAt = $reviewedBy ? $start->subDays(min(5, $spanDays)) : null;
             $authorizeCapture = (bool) ($spec['authorize_capture'] ?? false);
             $rejectionReason = $status === 'rejected' ? 'Bulk demo rejection — slot not confirmed '.$marker : null;
@@ -171,7 +170,7 @@ class DemoRentalsBulkSeeder extends Seeder
                     'routing_mode' => 'cost',
                 ],
                 'status' => $status,
-                'is_telemetry_active' => in_array($status, ['in_progress', 'scheduled', 'approved'], true) && $idx % 2 === 0,
+                'is_telemetry_active' => in_array($status, ['in_progress', 'active', 'scheduled', 'approved'], true) && $idx % 2 === 0,
                 'payment_status' => $paymentStatus,
                 'reviewed_by' => $reviewedBy,
                 'reviewed_at' => $reviewedAt,
@@ -179,7 +178,7 @@ class DemoRentalsBulkSeeder extends Seeder
                     ? $start->subDays(2)
                     : ($paymentStatus === 'paid' && $status === 'completed' ? $start->addDays(2) : null),
                 'payment_approved_by' => $authorizeCapture
-                    ? $paymentApprover->id
+                    ? $admin->id
                     : ($paymentStatus === 'paid' && $status === 'completed' ? $admin->id : null),
                 'rejection_reason' => $rejectionReason,
                 'cancellation_reason' => $cancellationReason,
@@ -205,35 +204,14 @@ class DemoRentalsBulkSeeder extends Seeder
                 );
             }
 
-            if ($status === 'in_progress') {
-                Container::query()->whereKey($containerId)->update(['current_status' => 'in_use']);
-                $vesselId = Vessel::query()
-                    ->where('current_port_id', $leg['origin_id'])
-                    ->orderBy('id')
-                    ->value('id');
-                if ($vesselId) {
-                    $dep = $start->max($now->subDays(10));
-                    $shipment = Shipment::query()->create([
-                        'vessel_id' => $vesselId,
-                        'route_id' => $leg['route_id'],
-                        'leg_sequence' => 1,
-                        'departure_date' => $dep,
-                        'arrival_date' => $dep->addDays(max(1, $leg['days'])),
-                        'actual_departure_date' => $dep,
-                        'actual_arrival_date' => null,
-                        'port_operations_until' => null,
-                        'tracking_number' => $this->uniqueTracking(),
-                        'status' => 'in_transit',
-                    ]);
-                    ShipmentItem::query()->create([
-                        'shipment_id' => $shipment->id,
-                        'container_id' => $containerId,
-                        'rental_id' => $rental->id,
-                        'loaded_at' => $dep,
-                        'condition_on_arrival' => 'good',
-                        'notes' => 'DemoRentalsBulkSeeder',
-                    ]);
-                }
+            if (in_array($status, ['in_progress', 'active'], true)) {
+                $profile = $spec['shipment_profile'] ?? match ($idx % 4) {
+                    0 => 'just_started',
+                    1 => 'mid_route',
+                    2 => 'approaching_destination',
+                    default => 'scheduled_leg',
+                };
+                $this->attachBulkShipment($rental, $leg, $containerId, $now, $profile);
             } elseif ($status === 'completed') {
                 Container::query()->whereKey($containerId)->update([
                     'current_port_id' => $leg['dest_id'],
@@ -246,7 +224,7 @@ class DemoRentalsBulkSeeder extends Seeder
     }
 
     /**
-     * @return list<array{status: string, payment_status: string, start: CarbonImmutable, end: CarbonImmutable, title: string}>
+     * @return list<array{status: string, payment_status: string, start: CarbonImmutable, end: CarbonImmutable, title: string, authorize_capture?: bool, shipment_profile?: string}>
      */
     private function buildSpecs(CarbonImmutable $now, int $count): array
     {
@@ -281,17 +259,19 @@ class DemoRentalsBulkSeeder extends Seeder
 
                 continue;
             }
-            // 18–27: in progress (underway)
+            // 18–27: in progress (underway) — shipment profiles rotate by index
             if ($i < 28) {
                 $j = $i - 18;
                 $start = $now->subDays(12 + ($j % 6));
                 $end = $now->addDays(15 + ($j % 12));
+                $profiles = ['just_started', 'mid_route', 'approaching_destination', 'scheduled_leg'];
                 $specs[] = [
                     'status' => 'in_progress',
                     'payment_status' => $j % 3 === 0 ? 'pending' : 'paid',
                     'start' => $start,
                     'end' => $end,
                     'title' => 'Underway shipment',
+                    'shipment_profile' => $profiles[$j % 4],
                 ];
 
                 continue;
@@ -307,13 +287,47 @@ class DemoRentalsBulkSeeder extends Seeder
                     'start' => $start,
                     'end' => $end,
                     'title' => 'Rental just started',
+                    'shipment_profile' => 'just_started',
                 ];
 
                 continue;
             }
-            // 34–39: scheduled (future)
-            if ($i < 40) {
+            // 34–37: active (telemetry-friendly lifecycle)
+            if ($i < 38) {
                 $j = $i - 34;
+                $start = $now->subDays(9 + $j);
+                $end = $now->addDays(12 + ($j % 5));
+                $profiles = ['mid_route', 'approaching_destination', 'just_started', 'scheduled_leg'];
+                $specs[] = [
+                    'status' => 'active',
+                    'payment_status' => $j % 2 === 0 ? 'paid' : 'pending',
+                    'start' => $start,
+                    'end' => $end,
+                    'title' => 'Active rental (live ops)',
+                    'shipment_profile' => $profiles[$j % 4],
+                ];
+
+                continue;
+            }
+            // 38–41: in progress, rental ending in 1–3 days
+            if ($i < 42) {
+                $j = $i - 38;
+                $start = $now->subDays(24 + $j * 2);
+                $end = $now->addDays(1 + $j);
+                $specs[] = [
+                    'status' => 'in_progress',
+                    'payment_status' => 'paid',
+                    'start' => $start,
+                    'end' => $end,
+                    'title' => 'Rental ending soon',
+                    'shipment_profile' => 'approaching_destination',
+                ];
+
+                continue;
+            }
+            // 42–47: scheduled (future)
+            if ($i < 48) {
+                $j = $i - 42;
                 $start = $now->addDays(8 + $j * 5);
                 $end = $start->addDays(24 + ($j % 10));
                 $specs[] = [
@@ -326,9 +340,9 @@ class DemoRentalsBulkSeeder extends Seeder
 
                 continue;
             }
-            // 40–42: approved upcoming
-            if ($i < 43) {
-                $j = $i - 40;
+            // 48–50: approved upcoming
+            if ($i < 51) {
+                $j = $i - 48;
                 $start = $now->addDays(18 + $j * 7);
                 $end = $start->addDays(30);
                 $specs[] = [
@@ -342,9 +356,9 @@ class DemoRentalsBulkSeeder extends Seeder
 
                 continue;
             }
-            // 43–45: pending approval
-            if ($i < 46) {
-                $j = $i - 43;
+            // 51–53: pending approval
+            if ($i < 54) {
+                $j = $i - 51;
                 $start = $now->addDays(4 + $j * 6);
                 $end = $start->addDays(28);
                 $specs[] = [
@@ -357,8 +371,8 @@ class DemoRentalsBulkSeeder extends Seeder
 
                 continue;
             }
-            // 46–47: rejected / cancelled
-            $j = $i - 46;
+            // 54–55: rejected / cancelled
+            $j = $i - 54;
             $start = $now->subDays(20 + $j * 3);
             $end = $start->addDays(25);
             $specs[] = [
@@ -371,6 +385,95 @@ class DemoRentalsBulkSeeder extends Seeder
         }
 
         return $specs;
+    }
+
+    /**
+     * @param  array{origin_id: int, dest_id: int, route_id: int, days: int, distance: float}  $leg
+     */
+    private function attachBulkShipment(
+        Rental $rental,
+        array $leg,
+        int $containerId,
+        CarbonImmutable $now,
+        string $profile,
+    ): void {
+        Container::query()->whereKey($containerId)->update(['current_status' => 'in_use']);
+        $vesselId = Vessel::query()
+            ->where('current_port_id', $leg['origin_id'])
+            ->orderBy('id')
+            ->value('id');
+        if (! $vesselId) {
+            return;
+        }
+
+        $routeDays = max(1, $leg['days']);
+
+        switch ($profile) {
+            case 'just_started':
+                $dep = $now->subDay();
+                $arrival = $now->addDays(max(5, $routeDays + 4));
+                $status = 'in_transit';
+                $actualDep = $dep;
+                $actualArr = null;
+                $portOps = null;
+
+                break;
+            case 'mid_route':
+                $dep = $now->subDays(6);
+                $arrival = $now->addDays(5);
+                $status = 'in_transit';
+                $actualDep = $dep;
+                $actualArr = null;
+                $portOps = null;
+
+                break;
+            case 'approaching_destination':
+                $dep = $now->subDays(10);
+                $arrival = $now->addDays(2);
+                $status = 'in_transit';
+                $actualDep = $dep;
+                $actualArr = null;
+                $portOps = null;
+
+                break;
+            case 'scheduled_leg':
+                $dep = $now->addDays(2);
+                $arrival = $dep->addDays($routeDays);
+                $status = 'scheduled';
+                $actualDep = null;
+                $actualArr = null;
+                $portOps = null;
+
+                break;
+            default:
+                $dep = $now->subDays(3);
+                $arrival = $dep->addDays($routeDays);
+                $status = 'in_transit';
+                $actualDep = $dep;
+                $actualArr = null;
+                $portOps = null;
+        }
+
+        $shipment = Shipment::query()->create([
+            'vessel_id' => $vesselId,
+            'route_id' => $leg['route_id'],
+            'leg_sequence' => 1,
+            'departure_date' => $dep,
+            'arrival_date' => $arrival,
+            'actual_departure_date' => $actualDep,
+            'actual_arrival_date' => $actualArr,
+            'port_operations_until' => $portOps,
+            'tracking_number' => $this->uniqueTracking(),
+            'status' => $status,
+        ]);
+        ShipmentItem::query()->create([
+            'shipment_id' => $shipment->id,
+            'container_id' => $containerId,
+            'rental_id' => $rental->id,
+            'loaded_at' => $actualDep ?? $dep,
+            'condition_on_arrival' => 'good',
+            'notes' => 'DemoRentalsBulkSeeder:'.$profile,
+        ]);
     }
 
     private function uniqueTracking(): string

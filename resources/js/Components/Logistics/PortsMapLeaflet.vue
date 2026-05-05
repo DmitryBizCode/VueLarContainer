@@ -80,6 +80,23 @@ const fmtDate = (v) => {
     }
 };
 
+const escapeHtml = (s) =>
+    String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+const PORT_ACTIVITY_POPUP_LIMIT = 4;
+
+/** Strip "Port of ", trim length for popups */
+const shortPortName = (name) => {
+    if (!name) return '';
+    let s = String(name).replace(/^Port of /i, '').trim();
+    if (s.length > 16) s = `${s.slice(0, 14)}…`;
+    return s;
+};
+
 onMounted(async () => {
     loadError.value = '';
     try {
@@ -218,32 +235,59 @@ onMounted(async () => {
                             : 'Port';
             const ops = portOps.get(String(p.id));
             const rentalCount = ops ? ops.rentalIds.size : 0;
-            const rolesText = roleList.length ? ` · ${roleList.join(', ')}` : '';
-            const rentalText = rentalCount ? ` · ${rentalCount} rental(s)` : '';
-            const cityText = p.city ? ` · ${p.city}` : '';
+
+            const activities = Array.isArray(p.activities) ? p.activities : [];
+            let activityBlock = '';
+            if (activities.length) {
+                const shown = activities.slice(0, PORT_ACTIVITY_POPUP_LIMIT);
+                const more = activities.length - shown.length;
+                const parts = [
+                    '<div style="margin-top:4px;border-top:1px solid #e2e8f0;padding-top:4px;max-width:240px">',
+                ];
+                shown.forEach((a) => {
+                    const sub = a.sub ? ` <span style="opacity:.65">${escapeHtml(a.sub)}</span>` : '';
+                    parts.push(
+                        `<div style="font-size:10px;line-height:1.3;color:#0f172a;word-break:break-word;margin-top:3px">${escapeHtml(a.summary)}${sub}</div>`,
+                    );
+                });
+                if (more > 0) {
+                    parts.push(`<div style="margin-top:3px;font-size:9px;color:#94a3b8">+${more}</div>`);
+                }
+                parts.push('</div>');
+                activityBlock = parts.join('');
+            }
 
             let extraLines = '';
-            if (kind === 'transfer' || kind === 'transfer_completed' || kind === 'multi') {
+            const showTransferExtras = activities.length === 0;
+            if (showTransferExtras && (kind === 'transfer' || kind === 'transfer_completed' || kind === 'multi')) {
                 const ctx = transferPortCtx.get(String(p.id));
                 if (ctx) {
                     if (ctx.nextPorts.size) {
-                        extraLines += `<br><span style="font-size:11px;color:#0369a1">Next: ${[...ctx.nextPorts].join(', ')}</span>`;
+                        const nextShort = [...ctx.nextPorts].map((n) => shortPortName(n)).map(escapeHtml).join(', ');
+                        extraLines += `<br><span style="font-size:9px;color:#0369a1">→ ${nextShort}</span>`;
                     }
                     if (ctx.containers.size) {
-                        extraLines += `<br><span style="font-size:11px;color:#64748b">Containers: ${[...ctx.containers].join(', ')}</span>`;
+                        extraLines += `<br><span style="font-size:9px;color:#64748b">${[...ctx.containers].map(escapeHtml).join(', ')}</span>`;
                     }
                 }
             }
-            if (kind === 'transfer_completed') {
-                extraLines += `<br><span style="font-size:11px;color:#64748b">Status: completed</span>`;
-            } else if (kind === 'transfer') {
-                extraLines += `<br><span style="font-size:11px;color:#64748b">Status: pending / active</span>`;
+            if (showTransferExtras && kind === 'transfer_completed') {
+                extraLines += `<br><span style="font-size:9px;color:#94a3b8">done</span>`;
+            } else if (showTransferExtras && kind === 'transfer') {
+                extraLines += `<br><span style="font-size:9px;color:#94a3b8">hub</span>`;
             }
 
+            const title = escapeHtml(shortPortName(p.name) || p.name);
+            const subHead = activities.length
+                ? `<span style="font-size:9px;color:#64748b">${rentalCount ? `${rentalCount}·` : ''}${escapeHtml(p.city || '')}</span>`
+                : `<span style="font-size:9px;color:#64748b">${escapeHtml(label)}${rentalCount ? ` ·${rentalCount}` : ''}${p.city ? ` ·${escapeHtml(p.city)}` : ''}</span>`;
+
             m.bindPopup(
-                `<strong>${p.name}</strong><br>`
-                + `<span style="font-size:11px;color:#64748b">${label}${rolesText}${rentalText}${cityText}</span>`
+                `<div class="logistics-map-popup-inner"><strong style="font-size:12px">${title}</strong> ${subHead}<br>`
+                + activityBlock
                 + extraLines
+                + '</div>',
+                { maxWidth: 260, className: 'logistics-map-popup-wrap' },
             );
             mapLayers.push(m);
         });
@@ -280,31 +324,26 @@ onMounted(async () => {
 
         const fmt = (s) => String(s || '').replaceAll('_', ' ');
         const vesselPopupLines = (vp) => {
-            const lines = [];
-            if (vp.origin_name) {
-                lines.push(`<span style="font-size:11px;color:#64748b">From: ${vp.origin_name}</span>`);
-            }
-            if (vp.destination_name) {
-                lines.push(`<span style="font-size:11px;color:#64748b">To: ${vp.destination_name}</span>`);
+            const o = shortPortName(vp.origin_name);
+            const d = shortPortName(vp.destination_name);
+            const bits = [];
+            if (o && d) {
+                bits.push(`<span style="font-size:9px;color:#475569">${escapeHtml(o)}→${escapeHtml(d)}</span>`);
             }
             if (vp.arrival_date) {
                 const eta = fmtDate(vp.arrival_date);
-                lines.push(`<span style="font-size:11px;color:#0369a1">ETA: ${eta}</span>`);
-            }
-            const statusLabel = fmt(vp.shipment_status);
-            if (statusLabel) {
-                lines.push(`<span style="font-size:11px;color:#64748b">Status: ${statusLabel}</span>`);
+                bits.push(`<span style="font-size:9px;color:#0369a1">↓${eta}</span>`);
             }
             const n = Number(vp.rental_cargo_count) || 0;
             if (vp.has_rental_cargo && n > 1) {
-                lines.push(`<span style="font-size:11px;color:#0d9488;font-weight:600">${n} rented containers on board</span>`);
+                bits.push(`<span style="font-size:9px;color:#0d9488">${n} ctr</span>`);
             } else if (vp.has_rental_cargo) {
-                lines.push(`<span style="font-size:11px;color:#0d9488;font-weight:600">Rented cargo on board</span>`);
+                bits.push('<span style="font-size:9px;color:#0d9488">cargo</span>');
             }
             if (vp.is_user_shipment) {
-                lines.push(`<span style="font-size:11px;color:#2563eb;font-weight:600">Your cargo on this vessel</span>`);
+                bits.push('<span style="font-size:9px;color:#2563eb;font-weight:600">yours</span>');
             }
-            return lines.join('<br>');
+            return bits.join(' · ');
         };
 
         fleetSorted.forEach((vp) => {
@@ -322,12 +361,14 @@ onMounted(async () => {
             kind = isMine ? 'vessel_user' : 'vessel_fleet';
             const icon = buildLeafletIcon(L, kind, { heading });
             const m = L.marker([plat, plng], { icon }).addTo(map);
-            const header = kind === 'unloading'
-                ? `Vessel unloading · ${vp.vessel_name ?? 'Vessel'}`
-                : kind === 'delivered'
-                    ? `Delivery completed · ${vp.vessel_name ?? 'Vessel'}`
-                    : `${isMine ? 'Your vessel' : 'Vessel'} — ${vp.vessel_name ?? 'Fleet'}`;
-            m.bindPopup(`<strong>${header}</strong><br>${vesselPopupLines(vp)}`);
+            const vname = String(vp.vessel_name || 'Vessel').length > 22
+                ? `${String(vp.vessel_name).slice(0, 20)}…`
+                : (vp.vessel_name || 'Vessel');
+            const header = `${isMine ? '▶ ' : ''}${escapeHtml(vname)}`;
+            m.bindPopup(
+                `<div style="max-width:220px"><strong style="font-size:11px">${header}</strong><br>${vesselPopupLines(vp)}</div>`,
+                { maxWidth: 230, className: 'logistics-map-popup-wrap' },
+            );
             mapLayers.push(m);
         });
 
@@ -350,48 +391,36 @@ onMounted(async () => {
             const icon = buildLeafletIcon(L, kind);
             const m = L.marker([pos.latitude, pos.longitude], { icon }).addTo(map);
 
-            const header = kind === 'delivered'
-                ? 'Container delivered'
-                : kind === 'unloading'
-                    ? 'Container at destination (unloading)'
-                    : phase === 'pre_departure'
-                        ? 'Container at origin port'
-                        : 'Your container';
-            const popupLines = [`<strong>${header}</strong>`, `Rental #${pos.rental_id} · ${pos.container_serial ?? 'Container'}`];
-            if (pos.origin?.name && pos.destination?.name) {
-                popupLines.push(`<span style="font-size:11px;color:#64748b">${pos.origin.name} → ${pos.destination.name}</span>`);
+            const tag = kind === 'delivered' ? 'done' : kind === 'unloading' ? 'unload' : phase === 'pre_departure' ? 'wait' : 'ctr';
+            const serial = pos.container_serial ? String(pos.container_serial) : '—';
+            const serialS = serial.length > 14 ? `${serial.slice(0, 12)}…` : serial;
+            const oN = shortPortName(pos.origin?.name);
+            const dN = shortPortName(pos.destination?.name);
+            const popupLines = [
+                `<strong style="font-size:11px">#${pos.rental_id} ${escapeHtml(serialS)}</strong> <span style="font-size:9px;color:#94a3b8">${tag}</span>`,
+            ];
+            if (oN && dN) {
+                popupLines.push(`<span style="font-size:9px;color:#475569">${escapeHtml(oN)}→${escapeHtml(dN)}</span>`);
             }
-            if (phase) {
-                popupLines.push(`<span style="font-size:11px;color:#0369a1">Phase: ${fmt(phase)}</span>`);
-            }
-            if (pos.rental_status) {
-                popupLines.push(`<span style="font-size:11px;color:#64748b">Rental: ${fmt(pos.rental_status)}</span>`);
-            }
-            if (pos.payment_status) {
-                popupLines.push(`<span style="font-size:11px;color:#64748b">Payment: ${fmt(pos.payment_status)}</span>`);
-            }
+            const pay = pos.payment_status ? String(pos.payment_status).slice(0, 6) : '';
+            popupLines.push(
+                `<span style="font-size:9px;color:#64748b">${fmt(phase)}${pay ? ` ·${escapeHtml(pay)}` : ''}</span>`,
+            );
             const legs = Array.isArray(pos.route_legs) ? pos.route_legs : [];
-            const legCount = Number(pos.leg_count) || legs.length;
             if (pos.is_multi_hop && legs.length > 1) {
-                const intermediates = legs
-                    .slice(0, -1)
-                    .map((leg) => leg?.destination_name)
-                    .filter(Boolean);
-                const via = intermediates.length ? ` via ${intermediates.join(', ')}` : '';
-                popupLines.push(`<span style="font-size:11px;color:#64748b">Transshipment route (${legCount} legs)${via}</span>`);
                 const cur = Number.isInteger(pos.current_leg_index) ? Number(pos.current_leg_index) : -1;
-                legs.forEach((leg, i) => {
-                    if (!leg?.origin_name || !leg?.destination_name) return;
-                    const active = i === cur ? ' font-weight:600;color:#0f172a;' : '';
+                const curLeg = cur >= 0 && cur < legs.length ? legs[cur] : legs[0];
+                if (curLeg?.origin_name && curLeg?.destination_name) {
                     popupLines.push(
-                        `<span style="font-size:11px;color:#64748b;${active}">Leg ${i + 1}: ${leg.origin_name} → ${leg.destination_name}${leg.estimated_days ? ` · ${leg.estimated_days} d` : ''}</span>`
+                        `<span style="font-size:9px;color:#64748b">leg${cur >= 0 ? cur + 1 : '?'} ${escapeHtml(shortPortName(curLeg.origin_name))}→${escapeHtml(shortPortName(curLeg.destination_name))}</span>`,
                     );
-                });
-            } else {
-                popupLines.push(`<span style="font-size:11px;color:#64748b">Direct route</span>`);
+                }
             }
 
-            m.bindPopup(popupLines.join('<br>'));
+            m.bindPopup(
+                `<div style="max-width:220px;line-height:1.25">${popupLines.join('<br>')}</div>`,
+                { maxWidth: 230, className: 'logistics-map-popup-wrap' },
+            );
             mapLayers.push(m);
         });
 
@@ -434,3 +463,11 @@ onBeforeUnmount(() => {
         <div ref="el" class="h-[22rem] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner" />
     </div>
 </template>
+
+<style>
+/* Popup pane lives under the map div; class is unique to this map. */
+.logistics-map-popup-wrap .leaflet-popup-content {
+    margin: 6px 8px;
+    line-height: 1.2;
+}
+</style>

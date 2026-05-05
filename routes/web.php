@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
             ->name('notifications.read-all');
         Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
 
+        Route::get('/rentals/reachable-destinations', [RentalController::class, 'reachableDestinations'])->name('rentals.reachable-destinations');
         Route::get('/rentals/request', [RentalController::class, 'create'])->name('rentals.request.create');
         Route::post('/rentals/request/preview', [RentalController::class, 'preview'])->name('rentals.request.preview');
         Route::post('/rentals/request', [RentalController::class, 'store'])->name('rentals.request.store');

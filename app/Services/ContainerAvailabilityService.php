@@ -35,6 +35,33 @@ class ContainerAvailabilityService
     }
 
     /**
+     * Returns ports with available containers AND an assignable vessel (current or incoming).
+     * Each entry carries `vessel_departure_at` (ISO 8601) so the UI can cap the start-date picker.
+     *
+     * @return list<array{port_id:int, vessel_departure_at:string}>
+     */
+    public function portSchedulesWithAvailableContainers(): array
+    {
+        $forecastDays = (int) config('logistics.vessel_forecast_days', 30);
+        $now = CarbonImmutable::now();
+
+        $portIds = $this->portIdsWithAvailableContainerAtPort();
+
+        $result = [];
+        foreach ($portIds as $portId) {
+            $departure = $this->vesselSchedule->nextDepartureWindowAtPort($portId, $now, $forecastDays);
+            if ($departure !== null) {
+                $result[] = [
+                    'port_id' => $portId,
+                    'vessel_departure_at' => $departure->toIso8601String(),
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Ports where at least one container in `available` status is currently located.
      * Used to populate "Origin port" in rental request (Select ports) so users cannot pick a port with no load-out stock.
      *

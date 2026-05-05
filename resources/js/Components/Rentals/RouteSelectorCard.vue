@@ -1,7 +1,7 @@
 <script setup>
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     routes: {
@@ -49,6 +49,10 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    maxStartDate: {
+        type: String,
+        default: '',
+    },
     minEndDate: {
         type: String,
         default: '',
@@ -65,10 +69,39 @@ const emit = defineEmits([
     'update:requestedWeight',
 ]);
 
+const reachablePortIds = ref(new Set());
+const destinationLoading = ref(false);
+
+watch(
+    () => [props.routeMode, props.originPortId],
+    async ([mode, originId]) => {
+        if (mode !== 'ports' || !originId) {
+            reachablePortIds.value = new Set();
+            return;
+        }
+        destinationLoading.value = true;
+        try {
+            const resp = await window.axios.get(
+                route('rentals.reachable-destinations', {}, false),
+                { params: { origin_port_id: originId } },
+            );
+            reachablePortIds.value = new Set((resp.data?.port_ids ?? []).map(String));
+        } catch {
+            reachablePortIds.value = new Set();
+        } finally {
+            destinationLoading.value = false;
+        }
+    },
+    { immediate: true },
+);
+
 const destinationPortsOptions = computed(() => {
     const originId = props.originPortId != null ? String(props.originPortId) : '';
-    if (!originId) return props.ports;
-    return props.ports.filter((port) => String(port.id) !== originId);
+    let list = props.ports.filter((port) => String(port.id) !== originId);
+    if (props.routeMode === 'ports' && originId && reachablePortIds.value.size > 0) {
+        list = list.filter((p) => reachablePortIds.value.has(String(p.id)));
+    }
+    return list;
 });
 
 watch(
@@ -92,6 +125,7 @@ const startDateModel = computed({
 });
 
 const minStartDateModel = computed(() => (props.minStartDate ? new Date(props.minStartDate + 'T12:00:00') : null));
+const maxStartDateModel = computed(() => (props.maxStartDate ? new Date(props.maxStartDate + 'T12:00:00') : null));
 
 const endDateModel = computed({
     get: () => (props.endDate ? new Date(props.endDate + 'T12:00:00') : null),
@@ -169,10 +203,13 @@ const minEndDateModel = computed(() => (props.minEndDate ? new Date(props.minEnd
                     <select
                         id="destination_port_id"
                         :value="destinationPortId"
+                        :disabled="destinationLoading"
                         class="mt-1.5 w-full rounded-xl border-slate-200 text-sm shadow-sm focus:border-blue-700 focus:ring-blue-700"
                         @change="emit('update:destinationPortId', $event.target.value)"
                     >
-                        <option value="">Select destination port</option>
+                        <option value="">
+                            {{ destinationLoading ? 'Loading destinations…' : 'Select destination port' }}
+                        </option>
                         <option v-for="port in destinationPortsOptions" :key="`dest-${port.id}`" :value="port.id">
                             {{ port.label }}
                         </option>
@@ -187,6 +224,7 @@ const minEndDateModel = computed(() => (props.minEndDate ? new Date(props.minEnd
                     v-model="startDateModel"
                     mode="date"
                     :min-date="minStartDateModel"
+                    :max-date="maxStartDateModel"
                     class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white text-sm shadow-sm transition focus-within:border-blue-700 focus-within:ring-2 focus-within:ring-blue-700/20"
                     :popover="{ visibility: 'click', placement: 'bottom-start' }"
                 />

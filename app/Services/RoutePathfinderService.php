@@ -9,6 +9,71 @@ use App\Models\Route;
 class RoutePathfinderService
 {
     /**
+     * Returns all port IDs reachable from $originPortId via open routes (single-source Dijkstra, no early exit).
+     *
+     * @return list<int>
+     */
+    public function reachablePortIds(int $originPortId): array
+    {
+        $routes = Route::query()
+            ->where('route_status', 'open')
+            ->get(['origin_port_id', 'destination_port_id', 'estimated_days']);
+
+        $graph = [];
+        foreach ($routes as $r) {
+            $from = (int) $r->origin_port_id;
+            $to = (int) $r->destination_port_id;
+            $weight = (int) $r->estimated_days;
+            if (! isset($graph[$from][$to]) || $weight < $graph[$from][$to]) {
+                $graph[$from][$to] = $weight;
+            }
+        }
+
+        if (empty($graph[$originPortId])) {
+            return [];
+        }
+
+        $allPorts = array_unique(
+            array_merge(array_keys($graph), ...array_map('array_keys', $graph))
+        );
+
+        $dist = [$originPortId => 0];
+        foreach ($allPorts as $p) {
+            if (! isset($dist[$p])) {
+                $dist[$p] = PHP_INT_MAX;
+            }
+        }
+
+        $visited = [];
+        while (true) {
+            $u = null;
+            foreach ($dist as $port => $d) {
+                if (isset($visited[$port])) {
+                    continue;
+                }
+                if ($u === null || $d < $dist[$u]) {
+                    $u = $port;
+                }
+            }
+            if ($u === null || $dist[$u] === PHP_INT_MAX) {
+                break;
+            }
+            $visited[$u] = true;
+
+            foreach ($graph[$u] ?? [] as $v => $w) {
+                if (! isset($visited[$v]) && $dist[$v] > $dist[$u] + $w) {
+                    $dist[$v] = $dist[$u] + $w;
+                }
+            }
+        }
+
+        return array_values(array_filter(
+            array_keys($dist),
+            fn ($p) => $p !== $originPortId && $dist[$p] < PHP_INT_MAX,
+        ));
+    }
+
+    /**
      * @return array{legs: list<array{route_id:int,origin_port_id:int,destination_port_id:int,estimated_days:int,distance:float}>, total_days:int, total_distance:float, multi_hop:bool}|null
      */
     public function findPath(int $originPortId, int $destinationPortId, string $metric = 'time'): ?array

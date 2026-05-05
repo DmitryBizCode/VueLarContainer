@@ -44,7 +44,7 @@ class ContainerSeeder extends Seeder
         $now = now();
         $rows = [];
 
-        for ($i = 1; $i <= 56; $i++) {
+        for ($i = 1; $i <= 96; $i++) {
             $ownerId = $ownerIds[($i - 1) % count($ownerIds)];
             $portId = $portCycle[($i - 1) % count($portCycle)];
             $type = $types[$i % count($types)];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Shipment;
 use App\Models\Vessel;
 use Carbon\CarbonImmutable;
 
@@ -70,6 +71,49 @@ class VesselPortScheduleService
             ->orderBy('berth_busy_until')
             ->orderBy('id')
             ->first();
+    }
+
+    /**
+     * Earliest datetime a vessel can DEPART from $portId, combining:
+     *   a) vessels already at the port (berth_busy_until logic),
+     *   b) vessels scheduled to arrive within $forecastDays (via Shipment records).
+     * Returns null if no operational vessel is present or forecast.
+     */
+    public function nextDepartureWindowAtPort(
+        int $portId,
+        CarbonImmutable $after,
+        int $forecastDays
+    ): ?CarbonImmutable {
+        $portOpsDays = (int) config('logistics.port_operations_min_days', 2);
+
+        $fromCurrent = $this->nextAssignableTimeAtPort($portId, $after);
+
+        $horizon = $after->addDays($forecastDays);
+        $operational = config('logistics.vessel_operational_statuses', ['active', 'in_transit', 'in_port', 'scheduled']);
+
+        $arrivalTs = Shipment::query()
+            ->join('routes', 'routes.id', '=', 'shipments.route_id')
+            ->join('vessels', 'vessels.id', '=', 'shipments.vessel_id')
+            ->where('routes.destination_port_id', $portId)
+            ->whereIn('shipments.status', ['scheduled', 'in_transit'])
+            ->whereIn('vessels.status', $operational)
+            ->where('shipments.arrival_date', '>', $after)
+            ->where('shipments.arrival_date', '<=', $horizon)
+            ->orderBy('shipments.arrival_date')
+            ->value('shipments.arrival_date');
+
+        $fromIncoming = $arrivalTs !== null
+            ? CarbonImmutable::parse((string) $arrivalTs)->addDays($portOpsDays)
+            : null;
+
+        if ($fromCurrent === null) {
+            return $fromIncoming;
+        }
+        if ($fromIncoming === null) {
+            return $fromCurrent;
+        }
+
+        return $fromCurrent->lt($fromIncoming) ? $fromCurrent : $fromIncoming;
     }
 
     /**
