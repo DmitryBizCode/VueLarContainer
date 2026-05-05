@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v '^$')",
+      "Bash(grep -rn --include=\"*.php\" -E \"\\(password|secret|api_key|token\\)\\\\s*=\\\\s*['\\\\\"][^'\\\\\"]{4,}['\\\\\"]\" /Users/tage/PhpstormProjects/VueLarContainer/config/)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(grep -rn '$fillable\\\\|$guarded' /Users/tage/PhpstormProjects/VueLarContainer/app/Models/ '--include=*.php')",
+      "Bash(grep -n \"'[a-z_]*' => \\\\$\" /Users/tage/PhpstormProjects/VueLarContainer/app/Http/Controllers/Admin/AdminRentalController.php)",
+      "Bash(grep -rn \"=> \\\\$[a-z]\\\\+[,\\\\]]\" /Users/tage/PhpstormProjects/VueLarContainer/app/Http/Controllers/ --include=\"*.php\")",
+      "Bash(grep \"=> \\\\$\")",
+      "Bash(php -l /Users/tage/PhpstormProjects/VueLarContainer/app/Models/CargoManifest.php)",
+      "Bash(php -l /Users/tage/PhpstormProjects/VueLarContainer/app/Models/Maintenance.php)"
+    ]
+  }
+}

@@ -98,10 +98,16 @@ watch(
 const destinationPortsOptions = computed(() => {
     const originId = props.originPortId != null ? String(props.originPortId) : '';
     let list = props.ports.filter((port) => String(port.id) !== originId);
-    if (props.routeMode === 'ports' && originId && reachablePortIds.value.size > 0) {
-        list = list.filter((p) => reachablePortIds.value.has(String(p.id)));
+    if (props.routeMode !== 'ports' || !originId) {
+        return list;
     }
-    return list;
+    if (destinationLoading.value) {
+        return [];
+    }
+    if (reachablePortIds.value.size === 0) {
+        return [];
+    }
+    return list.filter((p) => reachablePortIds.value.has(String(p.id)));
 });
 
 watch(

@@ -15,8 +15,8 @@ return [
     | Rental end after final port arrival (business rule)
     |--------------------------------------------------------------------------
     */
-    'post_arrival_min_days' => (int) env('LOGISTICS_POST_ARRIVAL_MIN_DAYS', 1),
-    'post_arrival_max_days' => (int) env('LOGISTICS_POST_ARRIVAL_MAX_DAYS', 2),
+    'post_arrival_min_days' => (int) env('LOGISTICS_POST_ARRIVAL_MIN_DAYS', 2),
+    'post_arrival_max_days' => (int) env('LOGISTICS_POST_ARRIVAL_MAX_DAYS', 3),
 
     /*
     |--------------------------------------------------------------------------

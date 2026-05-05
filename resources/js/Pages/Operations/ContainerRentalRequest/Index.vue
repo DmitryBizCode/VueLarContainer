@@ -78,8 +78,11 @@ const props = defineProps({
         type: Object,
         default: () => ({
             port_operations_max_days: 4,
-            post_arrival_min_days: 1,
+            post_arrival_min_days: 2,
+            post_arrival_max_days: 3,
             loading_buffer_days: 3,
+            time_load_days: 2,
+            time_unload_days: 3,
         }),
     },
     routing_priority_options: {
@@ -193,8 +196,6 @@ const closeReasonModalRequest = () => {
     reasonModalRequest.show = false;
 };
 
-const LOADING_BUFFER_DAYS = 3;
-
 /** Match Laravel `CarbonImmutable` in UTC: add whole calendar days to an ISO `YYYY-MM-DD`. */
 function addUtcCalendarDays(isoDate, daysToAdd) {
     const parts = String(isoDate || '').split('-').map((x) => parseInt(x, 10));
@@ -227,18 +228,28 @@ const estimatedDaysFromRoute = computed(() => {
     return 1;
 });
 
-const minStartDate = computed(() => addUtcCalendarDays(new Date().toISOString().slice(0, 10), LOADING_BUFFER_DAYS));
+const minStartDate = computed(() => new Date().toISOString().slice(0, 10));
 
 const selectedOriginPort = computed(() => {
     if (!form.origin_port_id || form.route_mode !== 'ports') return null;
     return (props.origin_ports || []).find((p) => String(p.id) === String(form.origin_port_id)) ?? null;
 });
 
+const selectedRoute = computed(() => {
+    if (form.route_mode !== 'route' || !form.route_id) return null;
+    return props.routes.find((r) => String(r.id) === String(form.route_id)) ?? null;
+});
+
 const maxStartDate = computed(() => {
-    const port = selectedOriginPort.value;
-    if (!port?.vessel_departure_at) return '';
     const timeLoadDays = props.logistics_config?.time_load_days ?? 2;
-    const departureDate = new Date(port.vessel_departure_at).toISOString().slice(0, 10);
+    let vesselDepartureAt = null;
+    if (form.route_mode === 'ports') {
+        vesselDepartureAt = selectedOriginPort.value?.vessel_departure_at ?? null;
+    } else if (form.route_mode === 'route') {
+        vesselDepartureAt = selectedRoute.value?.origin_vessel_departure_at ?? null;
+    }
+    if (!vesselDepartureAt) return '';
+    const departureDate = new Date(vesselDepartureAt).toISOString().slice(0, 10);
     return addUtcCalendarDays(departureDate, -timeLoadDays);
 });
 
@@ -256,6 +267,21 @@ const minEndSpanDays = computed(() => {
 });
 
 const minEndDate = computed(() => {
+    const unloadDays =
+        props.logistics_config?.time_unload_days ??
+        Math.max(
+            Number(props.logistics_config?.post_arrival_min_days ?? 2),
+            Number(props.logistics_config?.post_arrival_max_days ?? 3),
+        );
+    const segments = previewState.routePlan?.segments;
+    if (Array.isArray(segments) && segments.length > 0) {
+        const last = segments[segments.length - 1];
+        const arrival = last?.planned_arrival;
+        if (arrival) {
+            const d = new Date(arrival).toISOString().slice(0, 10);
+            return addUtcCalendarDays(d, unloadDays);
+        }
+    }
     const baseStart = form.start_date && form.start_date > minStartDate.value ? form.start_date : minStartDate.value;
     return addUtcCalendarDays(baseStart, minEndSpanDays.value);
 });
@@ -387,6 +413,18 @@ watch(
         }
         if (start < minStartDate.value) {
             form.start_date = minStartDate.value;
+        }
+        if (maxStartDate.value && start > maxStartDate.value) {
+            form.start_date = maxStartDate.value;
+        }
+    }
+);
+
+watch(
+    () => maxStartDate.value,
+    (maxS) => {
+        if (maxS && form.start_date && form.start_date > maxS) {
+            form.start_date = maxS;
         }
     }
 );

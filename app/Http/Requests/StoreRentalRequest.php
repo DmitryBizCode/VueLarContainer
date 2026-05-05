@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Route as ShippingRoute;
 use App\Services\ContainerAvailabilityService;
+use App\Services\RoutePathfinderService;
+use App\Services\VesselPortScheduleService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -100,6 +104,48 @@ class StoreRentalRequest extends FormRequest
                     );
                 } else {
                     $validator->errors()->add('route_id', 'The selected route is not available.');
+                }
+            }
+
+            if ($routeMode === 'ports' && ($ctx['path_found'] ?? true)) {
+                $originId = (int) $this->input('origin_port_id');
+                $destId = (int) $this->input('destination_port_id');
+                if ($originId > 0 && $destId > 0) {
+                    $reachable = app(RoutePathfinderService::class)->reachablePortIds($originId);
+                    if (! in_array($destId, $reachable, true)) {
+                        $validator->errors()->add(
+                            'destination_port_id',
+                            'Selected destination is not reachable from this origin via open routes.'
+                        );
+                    }
+                }
+            }
+
+            $originForSchedule = (int) ($ctx['origin_port_id'] ?? 0);
+            if ($originForSchedule <= 0 && $routeMode === 'route') {
+                $rid = (int) $this->input('route_id');
+                if ($rid > 0) {
+                    $originForSchedule = (int) (ShippingRoute::query()->whereKey($rid)->value('origin_port_id') ?? 0);
+                }
+            }
+            if ($originForSchedule <= 0 && $routeMode === 'ports') {
+                $originForSchedule = (int) $this->input('origin_port_id');
+            }
+            if ($originForSchedule > 0) {
+                $departure = app(VesselPortScheduleService::class)->nextDepartureWindowAtPort(
+                    $originForSchedule,
+                    CarbonImmutable::now()->startOfDay(),
+                    max(1, (int) config('logistics.vessel_forecast_days', 30)),
+                );
+                if ($departure !== null) {
+                    $loadDays = max(0, (int) config('logistics.port_operations_min_days', 2));
+                    $maxStart = $departure->subDays($loadDays)->startOfDay();
+                    if ($startDate->copy()->startOfDay()->gt($maxStart)) {
+                        $validator->errors()->add(
+                            'start_date',
+                            'Start date must be on or before '.$maxStart->format('Y-m-d').' (latest cargo-ready date before vessel departure minus loading time).'
+                        );
+                    }
                 }
             }
 

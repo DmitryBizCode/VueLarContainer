@@ -15,20 +15,9 @@ class VesselPortScheduleService
      */
     public function hasAssignableVesselAtOrigin(int $originPortId, CarbonImmutable $readyFrom): bool
     {
-        $operational = config('logistics.vessel_operational_statuses', ['active', 'in_transit', 'in_port', 'scheduled']);
+        $forecastDays = max(1, (int) config('logistics.vessel_forecast_days', 30));
 
-        return Vessel::query()
-            ->where('current_port_id', $originPortId)
-            ->whereIn('status', $operational)
-            ->where(function ($q) use ($readyFrom) {
-                $q->whereNull('out_of_service_until')
-                    ->orWhere('out_of_service_until', '<=', $readyFrom);
-            })
-            ->where(function ($q) use ($readyFrom) {
-                $q->whereNull('berth_busy_until')
-                    ->orWhere('berth_busy_until', '<=', $readyFrom);
-            })
-            ->exists();
+        return $this->nextDepartureWindowAtPort($originPortId, $readyFrom, $forecastDays) !== null;
     }
 
     public function isVesselOperational(?Vessel $vessel): bool

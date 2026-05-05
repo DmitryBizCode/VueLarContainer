@@ -179,9 +179,11 @@ class ContainerAvailabilityService
 
         $totalDays = (int) array_sum(array_column($legs, 'estimated_days'));
         $totalDistance = (float) array_sum(array_column($legs, 'distance'));
+        $postArrivalMin = (int) config('logistics.post_arrival_min_days', 2);
+        $postArrivalMax = max($postArrivalMin, (int) config('logistics.post_arrival_max_days', 3));
         $spanDays = $totalDays
             + (int) config('logistics.port_operations_max_days', 4)
-            + (int) config('logistics.post_arrival_min_days', 1);
+            + $postArrivalMax;
 
         $first = $legs[0];
         $last = $legs[array_key_last($legs)];

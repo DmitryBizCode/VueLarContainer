@@ -116,6 +116,7 @@ class RentalController extends Controller
                 'destination_port_id' => $route->destination_port_id,
                 'estimated_days' => $route->estimated_days,
                 'distance' => (float) $route->distance,
+                'origin_vessel_departure_at' => $scheduleByPortId->get($route->origin_port_id)['vessel_departure_at'] ?? null,
                 'label' => sprintf(
                     '%s, %s -> %s, %s',
                     $route->originPort?->name ?? 'N/A',
@@ -174,10 +175,14 @@ class RentalController extends Controller
             ],
             'logistics_config' => [
                 'port_operations_max_days' => (int) config('logistics.port_operations_max_days', 4),
-                'post_arrival_min_days' => (int) config('logistics.post_arrival_min_days', 1),
+                'post_arrival_min_days' => (int) config('logistics.post_arrival_min_days', 2),
+                'post_arrival_max_days' => (int) config('logistics.post_arrival_max_days', 3),
                 'loading_buffer_days' => 3,
                 'time_load_days' => (int) config('logistics.port_operations_min_days', 2),
-                'time_unload_days' => (int) config('logistics.post_arrival_min_days', 1),
+                'time_unload_days' => max(
+                    (int) config('logistics.post_arrival_min_days', 2),
+                    (int) config('logistics.post_arrival_max_days', 3)
+                ),
             ],
             'routing_priority_options' => [
                 ['value' => '', 'label' => 'Auto (from SLA priority)'],
@@ -232,7 +237,7 @@ class RentalController extends Controller
             'origin_port_id' => ['nullable', 'integer', 'exists:ports,id'],
             'destination_port_id' => ['nullable', 'integer', 'exists:ports,id', 'different:origin_port_id'],
             'container_id' => ['nullable', 'integer', 'exists:containers,id'],
-            'start_date' => ['required', 'date'],
+            'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'cargo_types' => ['required', 'array', 'min:1'],
             'cargo_types.*' => ['string'],
@@ -249,7 +254,7 @@ class RentalController extends Controller
             'hazardous_material' => ['required', 'boolean'],
             'requires_escort' => ['required', 'boolean'],
             'seal_required' => ['required', 'boolean'],
-            'routing_priority' => ['nullable', 'string', 'in:speed,cost'],
+            'routing_priority' => ['nullable', 'string', 'in:speed,cost,balanced'],
         ]);
 
         $startDate = CarbonImmutable::parse($validated['start_date']);

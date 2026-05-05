@@ -48,7 +48,11 @@ class RentalRouteFeasibilityService
         $segments = [];
 
         $portOpsMinDays = max(0, (int) config('logistics.port_operations_min_days', 2));
-        $postArrivalMinDays = max(0, (int) config('logistics.post_arrival_min_days', 1));
+        $postArrivalMaxDays = max(
+            max(0, (int) config('logistics.post_arrival_min_days', 2)),
+            max(0, (int) config('logistics.post_arrival_max_days', 3))
+        );
+        $forecastDays = max(1, (int) config('logistics.vessel_forecast_days', 30));
         $maxProxyWaitHours = max(0, (int) config('logistics_map.max_proxy_wait_hours', 168)); // default 7 days
 
         $routeType = count($legs) > 1 ? 'indirect' : 'direct';
@@ -78,7 +82,7 @@ class RentalRouteFeasibilityService
             $destinationPortId = (int) $leg['destination_port_id'];
             $estimatedDays = max(0, (int) $leg['estimated_days']);
 
-            $nextAssignableAt = $this->vesselSchedule->nextAssignableTimeAtPort($originPortId, $readyFrom);
+            $nextAssignableAt = $this->vesselSchedule->nextDepartureWindowAtPort($originPortId, $readyFrom, $forecastDays);
             if ($nextAssignableAt === null) {
                 $warnings[] = "No operational vessel is available at origin port for leg {$order}.";
 
@@ -136,7 +140,7 @@ class RentalRouteFeasibilityService
         $finalArrival = $segments !== []
             ? CarbonImmutable::parse((string) $segments[count($segments) - 1]['planned_arrival'])
             : $startDate;
-        $minEnd = $finalArrival->addDays($postArrivalMinDays);
+        $minEnd = $finalArrival->addDays($postArrivalMaxDays);
         $minDays = max(1, (int) ceil($startDate->diffInSeconds($minEnd) / 86400));
         $recommended = $minDays + 2;
 
