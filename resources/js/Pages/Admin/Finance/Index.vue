@@ -438,7 +438,7 @@ const activeSection = ref(
                         </section>
                         <div class="grid gap-6 lg:grid-cols-2">
                             <section class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Revenue dynamics (12 months)</h3>
+                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Revenue dynamics (24 months)</h3>
                                 <div class="h-64">
                                     <RevenueDynamicsChart :chart-data="chartData" />
                                 </div>
@@ -888,7 +888,7 @@ const activeSection = ref(
                     <template v-if="activeSection === 'analytics'">
                         <div class="grid gap-6 lg:grid-cols-2">
                             <section class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Revenue dynamics (12 months)</h3>
+                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Revenue dynamics (24 months)</h3>
                                 <div class="h-64">
                                     <RevenueDynamicsChart :chart-data="chartData" />
                                 </div>
@@ -942,7 +942,7 @@ const activeSection = ref(
                                 </div>
                             </section>
                             <section class="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Top routes (12 months totals)</h3>
+                                <h3 class="mb-4 text-sm font-semibold text-slate-900">Top routes (totals)</h3>
                                 <div class="h-64">
                                     <BarChartHorizontal :chart-data="routeTrend" />
                                 </div>

@@ -415,7 +415,8 @@ class AdminFinanceAnalyticsService
     {
         $months = [];
         $now = Carbon::now()->startOfMonth();
-        for ($i = 11; $i >= 0; $i--) {
+        // 24 rolling calendar months — avoids empty charts when demo data predates a 12‑month window.
+        for ($i = 23; $i >= 0; $i--) {
             $start = $now->copy()->subMonths($i);
             $end = $start->copy()->endOfMonth();
             $months[] = [
@@ -428,23 +429,25 @@ class AdminFinanceAnalyticsService
 
         $ymExpr = $this->sqlYearMonthExpr('transaction_date');
 
+        // Avoid keeping models' default `select *` — PostgreSQL rejects GROUP BY when extra columns are selected.
         $txRows = Transaction::query()
-            ->selectRaw($ymExpr.' as ym')
+            ->select(DB::raw($ymExpr.' as ym'))
             ->selectRaw('COALESCE(SUM(CASE WHEN '.FinanceStatusGroups::sqlLowerStatusIn('status', FinanceStatusGroups::TRANSACTION_SUCCESS).' THEN amount ELSE 0 END), 0) as paid')
             ->selectRaw('COALESCE(SUM(CASE WHEN '.FinanceStatusGroups::sqlLowerStatusIn('status', FinanceStatusGroups::TRANSACTION_PENDING).' THEN amount ELSE 0 END), 0) as pending')
             ->selectRaw('COALESCE(SUM(CASE WHEN '.FinanceStatusGroups::sqlLowerStatusIn('status', FinanceStatusGroups::TRANSACTION_FAILURE).' THEN amount ELSE 0 END), 0) as failed')
             ->whereDate('transaction_date', '>=', $months[0]['start'])
             ->whereDate('transaction_date', '<=', $months[count($months) - 1]['end'])
-            ->groupBy('ym')
+            ->groupByRaw($ymExpr)
             ->get()
             ->keyBy('ym');
 
+        $createdYmExpr = $this->sqlYearMonthExpr('created_at');
         $rentalCounts = Rental::query()
-            ->selectRaw($this->sqlYearMonthExpr('created_at').' as ym')
+            ->select(DB::raw($createdYmExpr.' as ym'))
             ->selectRaw('COUNT(*) as rentalCount')
             ->whereDate('created_at', '>=', $months[0]['start'])
             ->whereDate('created_at', '<=', $months[count($months) - 1]['end'])
-            ->groupBy('ym')
+            ->groupByRaw($createdYmExpr)
             ->get()
             ->keyBy('ym');
 
@@ -474,9 +477,9 @@ class AdminFinanceAnalyticsService
         };
 
         $paidRentalRevenue
-            ->groupByRaw($closedYmExpr)
-            ->selectRaw($closedYmExpr.' as ym')
-            ->selectRaw('COALESCE(SUM(rentals.price), 0) as rentalRevenue');
+            ->select(DB::raw($closedYmExpr.' as ym'))
+            ->selectRaw('COALESCE(SUM(rentals.price), 0) as rentalRevenue')
+            ->groupByRaw($closedYmExpr);
 
         $paidRentalRevenue = $paidRentalRevenue->get()->keyBy('ym');
 
@@ -488,9 +491,9 @@ class AdminFinanceAnalyticsService
             ->whereRaw('LOWER(rentals.payment_status) = ?', ['rejected_by_approval'])
             ->whereDate('rentals.updated_at', '>=', $rangeStartChart)
             ->whereDate('rentals.updated_at', '<=', $rangeEndChart)
-            ->groupByRaw($updatedYmExpr)
-            ->selectRaw($updatedYmExpr.' as ym')
+            ->select(DB::raw($updatedYmExpr.' as ym'))
             ->selectRaw('COALESCE(SUM(rentals.price), 0) as add_failed')
+            ->groupByRaw($updatedYmExpr)
             ->get()
             ->keyBy('ym');
 
@@ -503,9 +506,9 @@ class AdminFinanceAnalyticsService
             })
             ->whereDate('rentals.updated_at', '>=', $rangeStartChart)
             ->whereDate('rentals.updated_at', '<=', $rangeEndChart)
-            ->groupByRaw($updatedYmExpr)
-            ->selectRaw($updatedYmExpr.' as ym')
+            ->select(DB::raw($updatedYmExpr.' as ym'))
             ->selectRaw('COALESCE(SUM(rentals.price), 0) as add_pending')
+            ->groupByRaw($updatedYmExpr)
             ->get()
             ->keyBy('ym');
 

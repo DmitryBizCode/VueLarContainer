@@ -381,7 +381,7 @@ class AdminFinanceController extends Controller
             return strcmp((string) ($b['transaction_date'] ?? ''), (string) ($a['transaction_date'] ?? ''));
         });
 
-        $chartData = Cache::remember('admin_finance:chart_data:v2', now()->addMinutes(5), fn () => $this->financeAnalytics->buildChartData());
+        $chartData = Cache::remember('admin_finance:chart_data:v4', now()->addMinutes(5), fn () => $this->financeAnalytics->buildChartData());
         $chartPaymentMethods = Cache::remember('admin_finance:chart_payment_methods:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartPaymentMethods());
         $chartByRoute = Cache::remember('admin_finance:chart_by_route:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartByRoute());
         $chartTopContainers = Cache::remember('admin_finance:chart_top_containers:v1', now()->addMinutes(10), fn () => $this->financeAnalytics->buildChartTopContainers());

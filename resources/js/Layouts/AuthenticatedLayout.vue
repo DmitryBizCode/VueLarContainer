@@ -146,7 +146,7 @@ watch(sidebarCollapsed, (value) => {
                     </div>
                 </header>
 
-                <main class="px-0 pb-10">
+                <main class="app-shell-main px-0 pb-10">
                     <slot />
                 </main>
             </div>

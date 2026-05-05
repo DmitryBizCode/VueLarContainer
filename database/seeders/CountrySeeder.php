@@ -18,6 +18,11 @@ class CountrySeeder extends Seeder
         'SG' => '+65', 'AE' => '+971', 'EG' => '+20', 'CN' => '+86',
         // North Africa / Middle East (for expanded ports)
         'MA' => '+212', 'DZ' => '+213', 'TN' => '+216', 'IL' => '+972',
+        // Americas / Africa / Oceania (UNLOCODE-backed ports in PortSeeder)
+        'BR' => '+55', 'AR' => '+54', 'CL' => '+56', 'PE' => '+51', 'CO' => '+57', 'MX' => '+52',
+        'ZA' => '+27', 'KE' => '+254', 'NG' => '+234', 'NA' => '+264', 'NZ' => '+64',
+        // Extra hubs (ports.csv) — Asia / Central America / East Africa
+        'KR' => '+82', 'IN' => '+91', 'LK' => '+94', 'MY' => '+60', 'TZ' => '+255', 'PA' => '+507',
     ];
 
     public function run(): void
@@ -111,6 +116,23 @@ class CountrySeeder extends Seeder
             ['name' => 'Algeria', 'iso_code' => 'DZ', 'interest_tax' => 19.00],
             ['name' => 'Tunisia', 'iso_code' => 'TN', 'interest_tax' => 19.00],
             ['name' => 'Israel', 'iso_code' => 'IL', 'interest_tax' => 17.00],
+            ['name' => 'Brazil', 'iso_code' => 'BR', 'interest_tax' => 17.00],
+            ['name' => 'Argentina', 'iso_code' => 'AR', 'interest_tax' => 21.00],
+            ['name' => 'Chile', 'iso_code' => 'CL', 'interest_tax' => 19.00],
+            ['name' => 'Peru', 'iso_code' => 'PE', 'interest_tax' => 18.00],
+            ['name' => 'Colombia', 'iso_code' => 'CO', 'interest_tax' => 19.00],
+            ['name' => 'Mexico', 'iso_code' => 'MX', 'interest_tax' => 16.00],
+            ['name' => 'South Africa', 'iso_code' => 'ZA', 'interest_tax' => 15.00],
+            ['name' => 'Kenya', 'iso_code' => 'KE', 'interest_tax' => 16.00],
+            ['name' => 'Nigeria', 'iso_code' => 'NG', 'interest_tax' => 7.50],
+            ['name' => 'Namibia', 'iso_code' => 'NA', 'interest_tax' => 15.00],
+            ['name' => 'New Zealand', 'iso_code' => 'NZ', 'interest_tax' => 15.00],
+            ['name' => 'South Korea', 'iso_code' => 'KR', 'interest_tax' => 10.00],
+            ['name' => 'India', 'iso_code' => 'IN', 'interest_tax' => 18.00],
+            ['name' => 'Sri Lanka', 'iso_code' => 'LK', 'interest_tax' => 18.00],
+            ['name' => 'Malaysia', 'iso_code' => 'MY', 'interest_tax' => 10.00],
+            ['name' => 'Tanzania', 'iso_code' => 'TZ', 'interest_tax' => 18.00],
+            ['name' => 'Panama', 'iso_code' => 'PA', 'interest_tax' => 7.00],
         ];
 
         foreach ($extra as $row) {

@@ -343,107 +343,107 @@ const markerIconColor = (state) => {
 
                         <div class="grid gap-4 xl:grid-cols-2">
                             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-slate-900">Finance pulse</h3>
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                                <div class="flex min-w-0 items-start justify-between gap-3">
+                                    <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Finance pulse</h3>
+                                    <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                                         Last transaction: {{ formatDate(props.financialOverview.lastTransactionAt) }}
                                     </span>
                                 </div>
                                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('completed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('completed')" />
                                                 </svg>
                                             </span>
-                                            Earned (completed)
+                                            <span class="min-w-0 break-words">Earned (completed)</span>
                                         </p>
-                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.earnedRevenueAmount ?? props.financialOverview.paidAmount) }}</p>
-                                        <p class="text-xs text-slate-500">{{ props.financialOverview.earnedRentalsCount ?? 0 }} rentals</p>
-                                        <p class="mt-1 text-[11px] leading-snug text-slate-500">
+                                        <p class="mt-1 break-words text-lg font-bold tabular-nums text-slate-900">{{ formatMoney(props.financialOverview.earnedRevenueAmount ?? props.financialOverview.paidAmount) }}</p>
+                                        <p class="break-words text-xs text-slate-500">{{ props.financialOverview.earnedRentalsCount ?? 0 }} rentals</p>
+                                        <p class="mt-1 break-words text-[11px] leading-snug text-slate-500">
                                             Payment rails: {{ formatMoney(props.financialOverview.paidTransactionsAmount ?? 0) }}
                                             <span class="tabular-nums">({{ props.financialOverview.paidTransactionsCount ?? 0 }} tx)</span>
                                         </p>
                                     </div>
-                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('pending')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('pending')" />
                                                 </svg>
                                             </span>
-                                            Pending
+                                            <span class="min-w-0 break-words">Pending</span>
                                         </p>
-                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.pendingAmount) }}</p>
-                                        <p class="text-xs text-slate-500">{{ props.financialOverview.pendingCount }} transactions</p>
+                                        <p class="mt-1 break-words text-lg font-bold tabular-nums text-slate-900">{{ formatMoney(props.financialOverview.pendingAmount) }}</p>
+                                        <p class="break-words text-xs text-slate-500">{{ props.financialOverview.pendingCount }} transactions</p>
                                     </div>
-                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('failed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('failed')" />
                                                 </svg>
                                             </span>
-                                            Failed
+                                            <span class="min-w-0 break-words">Failed</span>
                                         </p>
-                                        <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.financialOverview.failedAmount) }}</p>
-                                        <p class="text-xs text-slate-500">{{ props.financialOverview.failedCount }} transactions</p>
+                                        <p class="mt-1 break-words text-lg font-bold tabular-nums text-slate-900">{{ formatMoney(props.financialOverview.failedAmount) }}</p>
+                                        <p class="break-words text-xs text-slate-500">{{ props.financialOverview.failedCount }} transactions</p>
                                     </div>
                                 </div>
                             </section>
 
                             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-slate-900">Shipment health</h3>
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                                <div class="flex min-w-0 items-start justify-between gap-3">
+                                    <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Shipment health</h3>
+                                    <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                                         Fleet signal
                                     </span>
                                 </div>
                                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('in_progress')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('in_progress')" />
                                                 </svg>
                                             </span>
-                                            In transit
+                                            <span class="min-w-0 break-words">In transit</span>
                                         </p>
-                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.inTransitCount }}</p>
+                                        <p class="mt-1 break-words text-2xl font-bold tabular-nums text-slate-900">{{ props.shipmentOverview.inTransitCount }}</p>
                                     </div>
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('completed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('completed')" />
                                                 </svg>
                                             </span>
-                                            Arrived this week
+                                            <span class="min-w-0 break-words">Arrived this week</span>
                                         </p>
-                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.arrivedThisWeekCount }}</p>
+                                        <p class="mt-1 break-words text-2xl font-bold tabular-nums text-slate-900">{{ props.shipmentOverview.arrivedThisWeekCount }}</p>
                                     </div>
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('scheduled')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('scheduled')" />
                                                 </svg>
                                             </span>
-                                            Upcoming arrivals
+                                            <span class="min-w-0 break-words">Upcoming arrivals</span>
                                         </p>
-                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ props.shipmentOverview.upcomingArrivalsCount }}</p>
+                                        <p class="mt-1 break-words text-2xl font-bold tabular-nums text-slate-900">{{ props.shipmentOverview.upcomingArrivalsCount }}</p>
                                     </div>
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                                        <p class="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
-                                            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                    <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs uppercase tracking-wide text-slate-600">
+                                            <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                 <svg class="h-2.5 w-2.5" :class="markerIconColor('failed')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                     <path :d="markerIconPath('failed')" />
                                                 </svg>
                                             </span>
-                                            Delayed / high risk
+                                            <span class="min-w-0 break-words">Delayed / high risk</span>
                                         </p>
-                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ operationalAttentionCount }}</p>
+                                        <p class="mt-1 break-words text-2xl font-bold tabular-nums text-slate-900">{{ operationalAttentionCount }}</p>
                                     </div>
                                 </div>
                                 <div class="mt-3 flex flex-wrap gap-2">
@@ -467,14 +467,14 @@ const markerIconColor = (state) => {
                                 <h3 class="text-sm font-bold text-slate-900">Transactions by status</h3>
                                 <p class="mt-1 text-xs text-slate-500">Your payments across all statuses.</p>
                                 <div v-if="Object.keys(props.transactionsByStatus || {}).length" class="mt-3 space-y-2">
-                                    <div
-                                        v-for="(row, status) in props.transactionsByStatus"
-                                        :key="status"
-                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
-                                    >
-                                        <span class="font-semibold text-slate-700">{{ status }}</span>
-                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
-                                    </div>
+                                        <div
+                                            v-for="(row, status) in props.transactionsByStatus"
+                                            :key="status"
+                                            class="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                        >
+                                            <span class="min-w-0 break-words font-semibold text-slate-700">{{ status }}</span>
+                                            <span class="shrink-0 tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.amount_sum ?? 0) }}</span>
+                                        </div>
                                 </div>
                                 <p v-else class="mt-3 text-sm text-slate-600">No transactions yet.</p>
                             </div>
@@ -483,14 +483,14 @@ const markerIconColor = (state) => {
                                 <h3 class="text-sm font-bold text-slate-900">Rentals by status</h3>
                                 <p class="mt-1 text-xs text-slate-500">Your rental lifecycle distribution.</p>
                                 <div v-if="Object.keys(props.rentalsByStatus || {}).length" class="mt-3 space-y-2">
-                                    <div
-                                        v-for="(row, status) in props.rentalsByStatus"
-                                        :key="status"
-                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
-                                    >
-                                        <span class="font-semibold text-slate-700">{{ status }}</span>
-                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
-                                    </div>
+                                        <div
+                                            v-for="(row, status) in props.rentalsByStatus"
+                                            :key="status"
+                                            class="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                        >
+                                            <span class="min-w-0 break-words font-semibold text-slate-700">{{ status }}</span>
+                                            <span class="shrink-0 tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                        </div>
                                 </div>
                                 <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
                             </div>
@@ -499,14 +499,14 @@ const markerIconColor = (state) => {
                                 <h3 class="text-sm font-bold text-slate-900">Rentals by payment status</h3>
                                 <p class="mt-1 text-xs text-slate-500">Payment states for your rentals.</p>
                                 <div v-if="Object.keys(props.rentalsByPaymentStatus || {}).length" class="mt-3 space-y-2">
-                                    <div
-                                        v-for="(row, status) in props.rentalsByPaymentStatus"
-                                        :key="status"
-                                        class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
-                                    >
-                                        <span class="font-semibold text-slate-700">{{ status }}</span>
-                                        <span class="tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
-                                    </div>
+                                        <div
+                                            v-for="(row, status) in props.rentalsByPaymentStatus"
+                                            :key="status"
+                                            class="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                        >
+                                            <span class="min-w-0 break-words font-semibold text-slate-700">{{ status }}</span>
+                                            <span class="shrink-0 tabular-nums text-slate-600">{{ row.count ?? 0 }} · {{ formatMoney(row.price_sum ?? 0) }}</span>
+                                        </div>
                                 </div>
                                 <p v-else class="mt-3 text-sm text-slate-600">No rentals yet.</p>
                             </div>
@@ -523,13 +523,13 @@ const markerIconColor = (state) => {
                                 </span>
                             </div>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                     <p class="text-xs font-semibold text-slate-500">Lost revenue (price)</p>
-                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
+                                    <p class="mt-1 break-words text-lg font-bold tabular-nums text-slate-900">{{ formatMoney(props.rejectedApproval.lostRevenuePriceSum ?? 0) }}</p>
                                 </div>
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                     <p class="text-xs font-semibold text-slate-500">Tx volume</p>
-                                    <p class="mt-1 text-lg font-bold text-slate-900">{{ formatMoney(props.rejectedApproval.txAmountSum ?? 0) }}</p>
+                                    <p class="mt-1 break-words text-lg font-bold tabular-nums text-slate-900">{{ formatMoney(props.rejectedApproval.txAmountSum ?? 0) }}</p>
                                 </div>
                             </div>
                         </section>
@@ -561,16 +561,16 @@ const markerIconColor = (state) => {
                                             ]"
                                             @click="!note.is_read && markNotificationRead(note)"
                                         >
-                                            <div class="flex items-center justify-between gap-2">
-                                            <p class="inline-flex items-center gap-1.5 text-sm font-semibold">
-                                                <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                            <div class="flex min-w-0 items-center justify-between gap-2">
+                                            <p class="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold">
+                                                <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                     <svg class="h-2.5 w-2.5" :class="markerIconColor(note.type)" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                         <path :d="markerIconPath(note.type)" />
                                                     </svg>
                                                 </span>
-                                                {{ note.title }}
+                                                <span class="min-w-0 break-words">{{ note.title }}</span>
                                             </p>
-                                                <div class="flex items-center gap-2">
+                                                <div class="flex shrink-0 items-center gap-2">
                                                     <span v-if="!note.is_read" class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
                                                         Unread
                                                     </span>
@@ -593,13 +593,13 @@ const markerIconColor = (state) => {
                                         <div
                                             v-for="entry in props.recentActivities"
                                             :key="`a-${entry.id}`"
-                                            class="flex items-start justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
+                                            class="flex min-w-0 items-start justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs"
                                         >
-                                            <div>
-                                                <p class="font-semibold text-slate-800">{{ entry.action }}</p>
-                                                <p class="text-slate-500">{{ entry.model_name }} #{{ entry.model_id }}</p>
+                                            <div class="min-w-0">
+                                                <p class="break-words font-semibold text-slate-800">{{ entry.action }}</p>
+                                                <p class="break-words text-slate-500">{{ entry.model_name }} #{{ entry.model_id }}</p>
                                             </div>
-                                            <span class="ml-2 shrink-0 text-slate-400">{{ formatDate(entry.created_at) }}</span>
+                                            <span class="shrink-0 text-slate-400">{{ formatDate(entry.created_at) }}</span>
                                         </div>
                                         <div v-if="!props.recentActivities.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-3 py-2.5 text-xs text-slate-500">
                                             No activity log entries.
@@ -609,30 +609,30 @@ const markerIconColor = (state) => {
                             </section>
 
                             <section class="2xl:col-span-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-slate-900">Recent container activity</h3>
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">Latest rental</span>
+                                <div class="flex min-w-0 items-start justify-between gap-3">
+                                    <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Recent container activity</h3>
+                                    <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">Latest rental</span>
                                 </div>
 
                                 <template v-if="props.recentRental">
                                     <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                             <p class="text-xs uppercase tracking-wide text-slate-500">Container</p>
-                                            <p class="mt-1 font-semibold text-slate-900">{{ props.recentRental.container_serial_number }}</p>
+                                            <p class="mt-1 break-words font-semibold text-slate-900">{{ props.recentRental.container_serial_number }}</p>
                                         </div>
-                                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                             <p class="text-xs uppercase tracking-wide text-slate-500">Type</p>
-                                            <p class="mt-1 font-semibold text-slate-900">{{ props.recentRental.container_type }}</p>
+                                            <p class="mt-1 break-words font-semibold text-slate-900">{{ props.recentRental.container_type }}</p>
                                         </div>
-                                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                             <p class="text-xs uppercase tracking-wide text-slate-500">Dimensions</p>
-                                            <p class="mt-1 font-semibold text-slate-900">
+                                            <p class="mt-1 break-words font-semibold text-slate-900">
                                                 {{ props.recentRental.width }} x {{ props.recentRental.length }} x {{ props.recentRental.height }} m
                                             </p>
                                         </div>
-                                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                        <div class="min-w-0 overflow-x-clip rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                             <p class="text-xs uppercase tracking-wide text-slate-500">Route</p>
-                                            <p class="mt-1 font-semibold text-slate-900">
+                                            <p class="mt-1 break-words font-semibold text-slate-900">
                                                 {{ props.recentRental.origin_port_name || 'N/A' }} -> {{ props.recentRental.destination_port_name || 'N/A' }}
                                             </p>
                                         </div>
@@ -651,9 +651,9 @@ const markerIconColor = (state) => {
 
                         <div class="grid gap-6 2xl:grid-cols-5">
                             <section class="2xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-slate-900">Upcoming milestones</h3>
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">10 days</span>
+                                <div class="flex min-w-0 items-start justify-between gap-3">
+                                    <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Upcoming milestones</h3>
+                                    <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">10 days</span>
                                 </div>
                                 <div class="mt-4 space-y-2">
                                     <div
@@ -662,16 +662,16 @@ const markerIconColor = (state) => {
                                         class="rounded-xl border px-3 py-2.5"
                                         :class="milestoneBadgeClass(event.type)"
                                     >
-                                        <div class="flex items-center justify-between gap-3">
-                                            <p class="inline-flex items-center gap-1.5 text-sm font-semibold">
-                                                <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
+                                        <div class="flex min-w-0 items-center justify-between gap-3">
+                                            <p class="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold">
+                                                <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-white text-slate-500">
                                                     <svg class="h-2.5 w-2.5" :class="markerIconColor(event.type === 'payment' ? 'pending' : 'scheduled')" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                                         <path :d="markerIconPath(event.type === 'payment' ? 'pending' : 'scheduled')" />
                                                     </svg>
                                                 </span>
-                                                {{ event.title }}
+                                                <span class="min-w-0 break-words">{{ event.title }}</span>
                                             </p>
-                                            <span class="text-xs font-medium opacity-80">{{ formatDate(event.date) }}</span>
+                                            <span class="shrink-0 text-xs font-medium opacity-80">{{ formatDate(event.date) }}</span>
                                         </div>
                                     </div>
                                     <div v-if="!props.upcomingMilestones.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-3 py-2.5 text-xs text-slate-500">
@@ -681,18 +681,18 @@ const markerIconColor = (state) => {
                             </section>
 
                             <section class="2xl:col-span-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-slate-900">Top sea routes</h3>
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">By shipments</span>
+                                <div class="flex min-w-0 items-start justify-between gap-3">
+                                    <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Top sea routes</h3>
+                                    <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">By shipments</span>
                                 </div>
                                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
                                     <div
                                         v-for="(route, index) in props.topRoutes"
                                         :key="`${route.origin_port_name}-${route.destination_port_name}-${index}`"
-                                        class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                                        class="min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
                                     >
                                         <p class="text-xs uppercase tracking-wide text-slate-500">Route {{ index + 1 }}</p>
-                                        <p class="mt-1 text-sm font-bold text-slate-900">
+                                        <p class="mt-1 break-words text-sm font-bold text-slate-900">
                                             {{ route.origin_port_name || 'N/A' }} -> {{ route.destination_port_name || 'N/A' }}
                                         </p>
                                         <p class="mt-2 text-xs font-semibold text-blue-700">{{ route.shipments_count }} shipments</p>
@@ -705,9 +705,9 @@ const markerIconColor = (state) => {
                         </div>
 
                         <section id="order-history" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-bold text-slate-900">Order history</h3>
-                                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                            <div class="flex min-w-0 items-start justify-between gap-3">
+                                <h3 class="min-w-0 break-words text-lg font-bold text-slate-900">Order history</h3>
+                                <span class="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                                     {{ props.orderHistory.length }} records
                                 </span>
                             </div>

@@ -542,7 +542,7 @@ class RentalController extends Controller
             $this->logRentalActivity((int) $request->user()->id, 'submitted_for_approval', $created, null, $request);
             $this->createNotification(
                 (int) $request->user()->id,
-                "Rental request #{$created->id} submitted",
+                'Rental request submitted',
                 'Your rental request is pending approval.',
                 'info'
             );
@@ -558,7 +558,7 @@ class RentalController extends Controller
 
         return redirect()
             ->route('rentals.request.create')
-            ->with('status', "Rental request #{$rental->id} submitted for approval.");
+            ->with('status', 'Your rental request was submitted for approval.');
     }
 
     public function show(Rental $rental): RedirectResponse

@@ -8,6 +8,7 @@ use App\Models\Port;
 use App\Models\Rental;
 use App\Models\Route;
 use App\Models\Shipment;
+use Database\Support\SeaPathWaypointPatches;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -49,7 +50,7 @@ class RoutesBuildSeaPathCommand extends Command
 
         $query = Route::query()
             ->where('route_status', 'open')
-            ->with(['originPort:id,latitude,longitude', 'destinationPort:id,latitude,longitude'])
+            ->with(['originPort:id,name,latitude,longitude', 'destinationPort:id,name,latitude,longitude'])
             ->orderBy('id');
 
         if ($routeId !== null) {
@@ -76,6 +77,8 @@ class RoutesBuildSeaPathCommand extends Command
         $skipped = 0;
         $failed = 0;
 
+        $searouteOverrides = SeaPathWaypointPatches::searouteOverrideByPortPair();
+
         foreach ($routes as $route) {
             /** @var Route $route */
             $o = $route->originPort;
@@ -99,6 +102,32 @@ class RoutesBuildSeaPathCommand extends Command
                 continue;
             }
 
+            $pairKey = $o->name.'|'.$d->name;
+            $canonical = $searouteOverrides[$pairKey] ?? null;
+            if (is_array($canonical) && $canonical !== []) {
+                try {
+                    if (! $dryRun) {
+                        $route->sea_path = array_values($canonical);
+                        if ($updateDays) {
+                            $route->estimated_days = self::heuristicDaysForKm((float) $route->distance);
+                        }
+                        $route->save();
+                    }
+                    $ok++;
+                    $this->line('Route #'.$route->id.': saved '.count($canonical).' waypoint(s) (canonical override; searoute skipped).');
+
+                    continue;
+                } catch (\Throwable $e) {
+                    $this->warn("Route #{$route->id}: error {$e->getMessage()}");
+                    if ($markFailedClosed && ! $dryRun) {
+                        $this->closeRoute((int) $route->id, $softDeleteUnreferenced);
+                    }
+                    $failed++;
+
+                    continue;
+                }
+            }
+
             try {
                 /** @var Response $resp */
                 $resp = Http::timeout($timeout)->post("{$baseUrl}/route", [
@@ -110,62 +139,55 @@ class RoutesBuildSeaPathCommand extends Command
                     'drop_endpoints' => false,
                 ]);
 
-                if (! $resp->ok()) {
-                    $this->warn("Route #{$route->id}: searoute HTTP {$resp->status()}");
+                $lengthKm = null;
+                $waypoints = null;
+
+                if ($resp->ok()) {
+                    $points = $resp->json('points');
+                    if (is_array($points) && count($points) >= 1) {
+                        $lengthKm = $resp->json('length');
+                        $lengthKm = is_numeric($lengthKm) ? (float) $lengthKm : null;
+
+                        // Normalize to [lat,lng] pairs (floats)
+                        $poly = [];
+                        foreach ($points as $row) {
+                            if (! is_array($row) || count($row) < 2) {
+                                continue;
+                            }
+                            $lat = is_numeric($row[0] ?? null) ? (float) $row[0] : null;
+                            $lng = is_numeric($row[1] ?? null) ? (float) $row[1] : null;
+                            if ($lat === null || $lng === null) {
+                                continue;
+                            }
+                            $poly[] = [$lat, $lng];
+                        }
+
+                        if ($poly !== []) {
+                            // Convert full polyline into sea_path waypoints.
+                            // Prefer trimming endpoints when it keeps enough geometry for safe sea rendering.
+                            $waypoints = $poly;
+                            if (count($poly) >= 4) {
+                                $waypoints = array_slice($poly, 1, -1);
+                            } elseif (count($poly) === 3) {
+                                // Keep the middle as waypoint (origin/dest will be re-attached by resolvePath)
+                                $waypoints = [array_values($poly)[1]];
+                            }
+                        }
+                    }
+                }
+
+                if ($waypoints === null || $waypoints === []) {
+                    if (! $resp->ok()) {
+                        $this->warn("Route #{$route->id}: searoute HTTP {$resp->status()}");
+                    } else {
+                        $this->warn("Route #{$route->id}: empty points.");
+                    }
                     if ($markFailedClosed && ! $dryRun) {
                         $this->closeRoute($route->id, $softDeleteUnreferenced);
                     }
                     $failed++;
 
                     continue;
-                }
-
-                $points = $resp->json('points');
-                if (! is_array($points) || count($points) < 1) {
-                    $this->warn("Route #{$route->id}: empty points.");
-                    if ($markFailedClosed && ! $dryRun) {
-                        $this->closeRoute($route->id, $softDeleteUnreferenced);
-                    }
-                    $failed++;
-
-                    continue;
-                }
-
-                $lengthKm = $resp->json('length');
-                $lengthKm = is_numeric($lengthKm) ? (float) $lengthKm : null;
-
-                // Normalize to [lat,lng] pairs (floats)
-                $poly = [];
-                foreach ($points as $row) {
-                    if (! is_array($row) || count($row) < 2) {
-                        continue;
-                    }
-                    $lat = is_numeric($row[0] ?? null) ? (float) $row[0] : null;
-                    $lng = is_numeric($row[1] ?? null) ? (float) $row[1] : null;
-                    if ($lat === null || $lng === null) {
-                        continue;
-                    }
-                    $poly[] = [$lat, $lng];
-                }
-
-                if ($poly === []) {
-                    $this->warn("Route #{$route->id}: no valid waypoint pairs.");
-                    if ($markFailedClosed && ! $dryRun) {
-                        $this->closeRoute($route->id, $softDeleteUnreferenced);
-                    }
-                    $failed++;
-
-                    continue;
-                }
-
-                // Convert full polyline into sea_path waypoints.
-                // Prefer trimming endpoints when it keeps enough geometry for safe sea rendering.
-                $waypoints = $poly;
-                if (count($poly) >= 4) {
-                    $waypoints = array_slice($poly, 1, -1);
-                } elseif (count($poly) === 3) {
-                    // Keep the middle as waypoint (origin/dest will be re-attached by resolvePath)
-                    $waypoints = [array_values($poly)[1]];
                 }
 
                 if (! $dryRun) {

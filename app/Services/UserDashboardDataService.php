@@ -466,7 +466,7 @@ class UserDashboardDataService
             ->get();
 
         foreach ($paymentDueRentals as $rental) {
-            $title = "Payment required for rental #{$rental->id}";
+            $title = 'Payment required';
             $message = 'Please complete payment before '.Carbon::parse($rental->end_date)->format('d M Y').'.';
             $this->storeNotificationIfMissing($userId, $title, $message, 'warning');
         }
@@ -482,7 +482,7 @@ class UserDashboardDataService
             ->get();
 
         foreach ($failedTransactions as $transaction) {
-            $title = "Payment failed for rental #{$transaction->rental_id}";
+            $title = 'Payment failed';
             $message = 'Last payment attempt failed. Please retry to avoid service interruption.';
             $this->storeNotificationIfMissing($userId, $title, $message, 'error');
         }
@@ -499,7 +499,7 @@ class UserDashboardDataService
             ->get();
 
         foreach ($arrivalMilestones as $arrival) {
-            $title = "Arrival update for rental #{$arrival->rental_id}";
+            $title = 'Container arrival update';
             $message = 'Container has arrived on '.Carbon::parse($arrival->actual_arrival_date)->format('d M Y').'.';
             $this->storeNotificationIfMissing($userId, $title, $message, 'success');
         }
@@ -542,7 +542,7 @@ class UserDashboardDataService
             $this->storeNotificationIfMissing(
                 $userId,
                 'New rental request submitted',
-                "Rental #{$newRental->id} is created and waiting for next status updates.",
+                'Your request was received and is waiting for the next status updates.',
                 'info'
             );
         }
@@ -560,7 +560,7 @@ class UserDashboardDataService
             $this->storeNotificationIfMissing(
                 $userId,
                 'Upcoming rental start',
-                'Rental #'.$upcomingRental->id.' starts on '.Carbon::parse($upcomingRental->start_date)->format('d M Y').'.',
+                'Your rental starts on '.Carbon::parse($upcomingRental->start_date)->format('d M Y').'.',
                 'warning'
             );
         }
@@ -578,7 +578,7 @@ class UserDashboardDataService
             $this->storeNotificationIfMissing(
                 $userId,
                 'Shipment status update',
-                'Rental #'.$inTransitShipment->rental_id.' shipment is currently '.$inTransitShipment->status.'.',
+                'Your shipment is currently '.$inTransitShipment->status.'.',
                 'info'
             );
         }

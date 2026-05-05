@@ -138,10 +138,8 @@ services:
       - laravel
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
-  # Опційно: Mailpit + queue-воркер. Запуск: docker compose --profile mail up -d
-  # Без profile за замовчуванням додаток працює з QUEUE_CONNECTION=sync і MAIL_MAILER=log у .env.
+  # Mailpit + Redis queue worker (стартує разом зі стеком; листи/черга — у .env).
   mailpit:
-    profiles: [mail]
     image: axllent/mailpit:latest
     container_name: ${APP_NAME:-laravel}_mailpit
     restart: unless-stopped
@@ -152,7 +150,6 @@ services:
       - laravel
 
   queue:
-    profiles: [mail]
     image: vuelarcontainer-php:latest
     container_name: ${APP_NAME:-laravel}_queue
     restart: unless-stopped
@@ -163,6 +160,8 @@ services:
     networks:
       - laravel
     depends_on:
+      php:
+        condition: service_started
       redis:
         condition: service_started
       postgres:
@@ -170,9 +169,8 @@ services:
     env_file:
       - .env
 
-  # Long-poll worker for the bot (required for /start, keyboards, linking). Start: docker compose --profile tg up -d telegram
+  # Long-poll worker для Telegram-бота (/start, keyboards, linking).
   telegram:
-    profiles: [tg]
     image: vuelarcontainer-php:latest
     container_name: ${APP_NAME:-laravel}_telegram
     restart: unless-stopped
@@ -183,6 +181,8 @@ services:
     networks:
       - laravel
     depends_on:
+      php:
+        condition: service_started
       postgres:
         condition: service_healthy
     env_file:

@@ -27,7 +27,7 @@ class ContainerSeeder extends Seeder
             $portIds['Port of Antwerp'] ?? null,
             $portIds['Port of Gdansk'] ?? null,
             $portIds['Port of Valencia'] ?? null,
-            $portIds['Port of Felixstowe'] ?? null,
+            $portIds['Port of Southampton'] ?? null,
             $portIds['Port of Odesa'] ?? null,
             $portIds['Port of Genoa'] ?? null,
             $portIds['Port of Bremerhaven'] ?? null,

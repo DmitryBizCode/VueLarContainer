@@ -68,7 +68,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Main Content з плавними переходами -->
-        <main class="flex-grow transition-all duration-500 ease-in-out">
+        <main class="app-shell-main flex-grow transition-all duration-500 ease-in-out">
             <div class="animate-fade-in">
                 <slot />
             </div>

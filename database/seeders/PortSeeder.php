@@ -9,7 +9,8 @@ use Illuminate\Database\Seeder;
 class PortSeeder extends Seeder
 {
     /**
-     * Major European / Black Sea container ports with approximate coordinates.
+     * Major trade hubs — coordinates for maritime demos where possible match
+     * {@see database/seeders/data/ports.csv} (UNLOCODE-style open dataset).
      *
      * @return list<array{name: string, city: string, iso: string, lat: float, lng: float}>
      */
@@ -20,6 +21,7 @@ class PortSeeder extends Seeder
             ['name' => 'Port of Constanta', 'city' => 'Constanta', 'iso' => 'RO', 'lat' => 44.1733, 'lng' => 28.6383],
             ['name' => 'Port of Piraeus', 'city' => 'Piraeus', 'iso' => 'GR', 'lat' => 37.9420, 'lng' => 23.6462],
             ['name' => 'Port of Koper', 'city' => 'Koper', 'iso' => 'SI', 'lat' => 45.5481, 'lng' => 13.7301],
+            ['name' => 'Port of Rijeka', 'city' => 'Rijeka', 'iso' => 'HR', 'lat' => 45.3267, 'lng' => 14.4242],
             ['name' => 'Port of Genoa', 'city' => 'Genoa', 'iso' => 'IT', 'lat' => 44.4056, 'lng' => 8.9463],
             ['name' => 'Port of Trieste', 'city' => 'Trieste', 'iso' => 'IT', 'lat' => 45.6495, 'lng' => 13.7768],
             ['name' => 'Port of La Spezia', 'city' => 'La Spezia', 'iso' => 'IT', 'lat' => 44.1030, 'lng' => 9.8241],
@@ -39,7 +41,6 @@ class PortSeeder extends Seeder
             ['name' => 'Port of Leixoes', 'city' => 'Porto', 'iso' => 'PT', 'lat' => 41.1829, 'lng' => -8.7030],
             ['name' => 'Port of Le Havre', 'city' => 'Le Havre', 'iso' => 'FR', 'lat' => 49.4938, 'lng' => 0.1077],
             ['name' => 'Port of Marseille', 'city' => 'Marseille', 'iso' => 'FR', 'lat' => 43.3102, 'lng' => 5.3679],
-            ['name' => 'Port of Dunkirk', 'city' => 'Dunkirk', 'iso' => 'FR', 'lat' => 51.0450, 'lng' => 2.3772],
             // Use the ocean-facing entrance of the Gironde estuary (Le Verdon-sur-Mer) to avoid land-crossing polylines.
             ['name' => 'Port of Bordeaux', 'city' => 'Bordeaux', 'iso' => 'FR', 'lat' => 45.5510, 'lng' => -1.0610],
             ['name' => 'Port of Antwerp', 'city' => 'Antwerp', 'iso' => 'BE', 'lat' => 51.2792, 'lng' => 4.3500],
@@ -54,16 +55,14 @@ class PortSeeder extends Seeder
             ['name' => 'Port of Szczecin', 'city' => 'Szczecin', 'iso' => 'PL', 'lat' => 53.4285, 'lng' => 14.5528],
             ['name' => 'Port of Gdynia', 'city' => 'Gdynia', 'iso' => 'PL', 'lat' => 54.5189, 'lng' => 18.5305],
             ['name' => 'Port of Southampton', 'city' => 'Southampton', 'iso' => 'GB', 'lat' => 50.8969, 'lng' => -1.3964],
-            ['name' => 'Port of Felixstowe', 'city' => 'Felixstowe', 'iso' => 'GB', 'lat' => 51.9536, 'lng' => 1.3511],
-            // Use Thames estuary / Tilbury area to keep maritime lines on water.
-            ['name' => 'Port of London', 'city' => 'London', 'iso' => 'GB', 'lat' => 51.4580, 'lng' => 0.3550],
-            ['name' => 'Port of Dublin', 'city' => 'Dublin', 'iso' => 'IE', 'lat' => 53.3438, 'lng' => -6.2146],
-            ['name' => 'Port of Cork', 'city' => 'Cork', 'iso' => 'IE', 'lat' => 51.8985, 'lng' => -8.4756],
+            ['name' => 'Port of Felixstowe', 'city' => 'Felixstowe', 'iso' => 'GB', 'lat' => 51.9631, 'lng' => 1.3511],
+            ['name' => 'Port of Dublin', 'city' => 'Dublin', 'iso' => 'IE', 'lat' => 53.3482, 'lng' => -6.1952],
             ['name' => 'Port of Aarhus', 'city' => 'Aarhus', 'iso' => 'DK', 'lat' => 56.1572, 'lng' => 10.2107],
             ['name' => 'Port of Copenhagen', 'city' => 'Copenhagen', 'iso' => 'DK', 'lat' => 55.6761, 'lng' => 12.5683],
             ['name' => 'Port of Gothenburg', 'city' => 'Gothenburg', 'iso' => 'SE', 'lat' => 57.6867, 'lng' => 11.8531],
             ['name' => 'Port of Stockholm', 'city' => 'Stockholm', 'iso' => 'SE', 'lat' => 59.3293, 'lng' => 18.0686],
             ['name' => 'Port of Oslo', 'city' => 'Oslo', 'iso' => 'NO', 'lat' => 59.9139, 'lng' => 10.7522],
+            ['name' => 'Port of Bergen', 'city' => 'Bergen', 'iso' => 'NO', 'lat' => 60.4050, 'lng' => 5.3192],
             ['name' => 'Port of Helsinki', 'city' => 'Helsinki', 'iso' => 'FI', 'lat' => 60.1713, 'lng' => 24.9410],
             ['name' => 'Port of Tallinn', 'city' => 'Tallinn', 'iso' => 'EE', 'lat' => 59.4419, 'lng' => 24.7656],
             ['name' => 'Port of Riga', 'city' => 'Riga', 'iso' => 'LV', 'lat' => 56.9639, 'lng' => 24.0914],
@@ -87,6 +86,32 @@ class PortSeeder extends Seeder
             ['name' => 'Port of Los Angeles', 'city' => 'Los Angeles', 'iso' => 'US', 'lat' => 33.7542, 'lng' => -118.2165],
             ['name' => 'Port of New York', 'city' => 'New York', 'iso' => 'US', 'lat' => 40.6681, 'lng' => -74.0451],
             ['name' => 'Port of Yokohama', 'city' => 'Yokohama', 'iso' => 'JP', 'lat' => 35.4437, 'lng' => 139.6380],
+
+            // Americas / Africa / Oceania — lat/lng from database/seeders/data/ports.csv (plus NZAKL row).
+            ['name' => 'Port of Santos', 'city' => 'Santos', 'iso' => 'BR', 'lat' => -23.933330, 'lng' => -46.316670],
+            ['name' => 'Port of Vancouver', 'city' => 'Vancouver', 'iso' => 'CA', 'lat' => 49.260872, 'lng' => -123.113952],
+            ['name' => 'Port of Callao', 'city' => 'Callao', 'iso' => 'PE', 'lat' => -12.050000, 'lng' => -77.133330],
+            ['name' => 'Port of Cartagena', 'city' => 'Cartagena', 'iso' => 'CO', 'lat' => 10.426557, 'lng' => -75.544167],
+            ['name' => 'Port of Veracruz', 'city' => 'Veracruz', 'iso' => 'MX', 'lat' => 19.200000, 'lng' => -96.083330],
+            ['name' => 'Port of Buenos Aires', 'city' => 'Buenos Aires', 'iso' => 'AR', 'lat' => -34.583330, 'lng' => -58.666670],
+            ['name' => 'Port of Durban', 'city' => 'Durban', 'iso' => 'ZA', 'lat' => -29.850000, 'lng' => 31.016670],
+            ['name' => 'Port of Mombasa', 'city' => 'Mombasa', 'iso' => 'KE', 'lat' => -4.050520, 'lng' => 39.667169],
+            ['name' => 'Port of Lagos', 'city' => 'Lagos', 'iso' => 'NG', 'lat' => 6.455057, 'lng' => 3.394179],
+            ['name' => 'Port of Walvis Bay', 'city' => 'Walvis Bay', 'iso' => 'NA', 'lat' => -22.955761, 'lng' => 14.507112],
+            ['name' => 'Port of Adelaide', 'city' => 'Adelaide', 'iso' => 'AU', 'lat' => -34.916670, 'lng' => 138.583330],
+            ['name' => 'Port of Auckland', 'city' => 'Auckland', 'iso' => 'NZ', 'lat' => -36.848500, 'lng' => 174.763300],
+
+            // Additional hubs — database/seeders/data/ports.csv (UNLOCODE-style).
+            ['name' => 'Port of Seattle', 'city' => 'Seattle', 'iso' => 'US', 'lat' => 47.603832, 'lng' => -122.330062],
+            ['name' => 'Port of Miami', 'city' => 'Miami', 'iso' => 'US', 'lat' => 25.774173, 'lng' => -80.193620],
+            ['name' => 'Port of Savannah', 'city' => 'Savannah', 'iso' => 'US', 'lat' => 32.079007, 'lng' => -81.092134],
+            ['name' => 'Port of Colon', 'city' => 'Colon', 'iso' => 'PA', 'lat' => 9.350000, 'lng' => -79.866670],
+            ['name' => 'Port of Busan', 'city' => 'Busan', 'iso' => 'KR', 'lat' => 35.133330, 'lng' => 129.050000],
+            ['name' => 'Port of Mumbai', 'city' => 'Mumbai', 'iso' => 'IN', 'lat' => 18.966670, 'lng' => 72.816670],
+            ['name' => 'Port of Colombo', 'city' => 'Colombo', 'iso' => 'LK', 'lat' => 6.916670, 'lng' => 79.850000],
+            ['name' => 'Port of Klang', 'city' => 'Klang', 'iso' => 'MY', 'lat' => 3.000000, 'lng' => 101.400000],
+            ['name' => 'Port of Dar es Salaam', 'city' => 'Dar es Salaam', 'iso' => 'TZ', 'lat' => -6.800000, 'lng' => 39.283330],
+            ['name' => 'Port of Shekou', 'city' => 'Shenzhen', 'iso' => 'CN', 'lat' => 22.483330, 'lng' => 113.916670],
         ];
     }
 

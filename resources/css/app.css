@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Authenticated shell: grid tracks shrink inside flex column so text wraps instead of overflowing. */
+@layer components {
+    .app-shell-main .grid {
+        min-width: 0;
+    }
+
+    .app-shell-main .grid > * {
+        min-width: 0;
+    }
+}
+
 /* Плавні переходи між секціями */
 section {
     scroll-margin-top: 80px;

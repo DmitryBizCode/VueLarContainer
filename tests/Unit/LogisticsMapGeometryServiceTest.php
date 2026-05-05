@@ -30,9 +30,28 @@ class LogisticsMapGeometryServiceTest extends TestCase
     public function test_stored_waypoints_merge_into_polyline(): void
     {
         $path = LogisticsMapGeometryService::resolvePath(0.0, 0.0, 10.0, 10.0, [[4.0, 2.0], [8.0, 6.0]]);
-        $this->assertCount(4, $path);
-        $this->assertEqualsWithDelta(4.0, $path[1][0], 1e-6);
-        $this->assertEqualsWithDelta(2.0, $path[1][1], 1e-6);
+        $this->assertGreaterThan(4, count($path));
+        $this->assertEqualsWithDelta(0.0, $path[0][0], 1e-6);
+        $this->assertEqualsWithDelta(0.0, $path[0][1], 1e-6);
+        $this->assertTrue($this->pathContainsNear($path, 4.0, 2.0));
+        $this->assertTrue($this->pathContainsNear($path, 8.0, 6.0));
+        $last = $path[count($path) - 1];
+        $this->assertEqualsWithDelta(10.0, $last[0], 1e-6);
+        $this->assertEqualsWithDelta(10.0, $last[1], 1e-6);
+    }
+
+    /**
+     * @param  list<array{0: float, 1: float}>  $path
+     */
+    private function pathContainsNear(array $path, float $lat, float $lng, float $eps = 1e-4): bool
+    {
+        foreach ($path as $p) {
+            if (abs($p[0] - $lat) < $eps && abs($p[1] - $lng) < $eps) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function test_haversine_km_is_positive_for_distinct_points(): void

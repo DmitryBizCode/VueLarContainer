@@ -42,7 +42,6 @@ return [
         // FR
         'Port of Le Havre',
         'Port of Marseille',
-        'Port of Dunkirk',
         'Port of Bordeaux',
 
         // ES
@@ -79,10 +78,6 @@ return [
 
         // GB / IE
         'Port of Southampton',
-        'Port of Felixstowe',
-        'Port of London',
-        'Port of Dublin',
-        'Port of Cork',
 
         // Nordics / Baltics
         'Port of Aarhus',
@@ -124,5 +119,42 @@ return [
         'Port of Algiers',
         'Port of Rades',
         'Port of Haifa',
+
+        // US / East Asia (Pacific demo lanes)
+        'Port of Los Angeles',
+        'Port of New York',
+        'Port of Seattle',
+        'Port of Miami',
+        'Port of Savannah',
+        'Port of Shanghai',
+        'Port of Singapore',
+        'Port of Yokohama',
+        'Port of Busan',
+        'Port of Shekou',
+
+        // Americas (UNLOCODE-aligned seed ports)
+        'Port of Vancouver',
+        'Port of Callao',
+        'Port of Cartagena',
+        'Port of Veracruz',
+        'Port of Santos',
+        'Port of Buenos Aires',
+        'Port of Colon',
+
+        // Indian Ocean / Southeast Asia (seed ports)
+        'Port of Mumbai',
+        'Port of Colombo',
+        'Port of Klang',
+
+        // Sub-Saharan Africa / Atlantic (seed ports)
+        'Port of Durban',
+        'Port of Mombasa',
+        'Port of Dar es Salaam',
+        'Port of Lagos',
+        'Port of Walvis Bay',
+
+        // Oceania (seed ports)
+        'Port of Adelaide',
+        'Port of Auckland',
     ],
 ];

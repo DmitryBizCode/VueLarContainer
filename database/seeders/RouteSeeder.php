@@ -16,6 +16,16 @@ class RouteSeeder extends Seeder
      */
     private function routeEdges(): array
     {
+        return array_merge(self::europeDemoEdges(), self::intercontinentalDemoEdges());
+    }
+
+    /**
+     * Atlantic Europe / Mediterranean / Black Sea demo legs.
+     *
+     * @return list<array{0: string, 1: string, 2: int, 3: float}>
+     */
+    public static function europeDemoEdges(): array
+    {
         return [
             ['Port of Hamburg', 'Port of Rotterdam', 2, 430.0],
             ['Port of Rotterdam', 'Port of Hamburg', 2, 430.0],
@@ -29,6 +39,8 @@ class RouteSeeder extends Seeder
             ['Port of Hamburg', 'Port of Kiel', 1, 95.0],
             ['Port of Rotterdam', 'Port of Antwerp', 1, 190.0],
             ['Port of Antwerp', 'Port of Rotterdam', 1, 190.0],
+            ['Port of Antwerp', 'Port of Le Havre', 2, 420.0],
+            ['Port of Le Havre', 'Port of Antwerp', 2, 420.0],
             ['Port of Rotterdam', 'Port of Amsterdam', 1, 95.0],
             ['Port of Amsterdam', 'Port of Rotterdam', 1, 95.0],
             ['Port of Bordeaux', 'Port of Le Havre', 3, 1050.0],
@@ -127,12 +139,47 @@ class RouteSeeder extends Seeder
             ['Port of Rotterdam', 'Port of Gdansk', 3, 1180.0],
             ['Port of Gdynia', 'Port of Gdansk', 1, 35.0],
             ['Port of Gdansk', 'Port of Gdynia', 1, 35.0],
+            ['Port of Gdansk', 'Port of Szczecin', 2, 380.0],
+            ['Port of Szczecin', 'Port of Gdansk', 2, 380.0],
+            ['Port of Gdansk', 'Port of Klaipeda', 1, 220.0],
+            ['Port of Klaipeda', 'Port of Gdansk', 1, 220.0],
+            ['Port of Klaipeda', 'Port of Riga', 1, 280.0],
+            ['Port of Riga', 'Port of Klaipeda', 1, 280.0],
             ['Port of Valencia', 'Port of Genoa', 3, 1100.0],
             ['Port of Genoa', 'Port of Valencia', 3, 1100.0],
             ['Port of Antwerp', 'Port of Hamburg', 2, 550.0],
             ['Port of Hamburg', 'Port of Antwerp', 2, 550.0],
             ['Port of Zeebrugge', 'Port of Rotterdam', 1, 160.0],
             ['Port of Rotterdam', 'Port of Zeebrugge', 1, 160.0],
+
+            // North Sea / Irish Sea / Skagerrak / Adriatic (ports + sea_path in SeaPathWaypointPatches).
+            ['Port of Felixstowe', 'Port of Southampton', 1, 180.0],
+            ['Port of Southampton', 'Port of Felixstowe', 1, 180.0],
+            ['Port of Felixstowe', 'Port of Rotterdam', 2, 300.0],
+            ['Port of Rotterdam', 'Port of Felixstowe', 2, 300.0],
+            ['Port of Dublin', 'Port of Southampton', 2, 520.0],
+            ['Port of Southampton', 'Port of Dublin', 2, 520.0],
+            ['Port of Dublin', 'Port of Rotterdam', 3, 750.0],
+            ['Port of Rotterdam', 'Port of Dublin', 3, 750.0],
+            ['Port of Bergen', 'Port of Gothenburg', 1, 500.0],
+            ['Port of Gothenburg', 'Port of Bergen', 1, 500.0],
+            ['Port of Bergen', 'Port of Hamburg', 2, 900.0],
+            ['Port of Hamburg', 'Port of Bergen', 2, 900.0],
+            ['Port of Rijeka', 'Port of Koper', 1, 120.0],
+            ['Port of Koper', 'Port of Rijeka', 1, 120.0],
+            ['Port of Rijeka', 'Port of Venice', 1, 220.0],
+            ['Port of Venice', 'Port of Rijeka', 1, 220.0],
+        ];
+    }
+
+    /**
+     * Transoceanic and non-European demo legs.
+     *
+     * @return list<array{0: string, 1: string, 2: int, 3: float}>
+     */
+    public static function intercontinentalDemoEdges(): array
+    {
+        return [
             ['Port of Rotterdam', 'Port of New York', 22, 5850.0],
             ['Port of New York', 'Port of Rotterdam', 22, 5850.0],
             ['Port of Los Angeles', 'Port of Yokohama', 14, 8900.0],
@@ -179,6 +226,92 @@ class RouteSeeder extends Seeder
             ['Port of Marseille', 'Port of Algiers', 2, 780.0],
             ['Port of Rades', 'Port of Marseille', 2, 950.0],
             ['Port of Marseille', 'Port of Rades', 2, 950.0],
+
+            // --- Americas / Caribbean / South Atlantic (demo days / km; geometry via routes:build-sea-path) ---
+            ['Port of Vancouver', 'Port of Los Angeles', 5, 2050.0],
+            ['Port of Los Angeles', 'Port of Vancouver', 5, 2050.0],
+            ['Port of Los Angeles', 'Port of Callao', 18, 6500.0],
+            ['Port of Callao', 'Port of Los Angeles', 18, 6500.0],
+            ['Port of Callao', 'Port of Santos', 17, 5800.0],
+            ['Port of Santos', 'Port of Callao', 17, 5800.0],
+            ['Port of Santos', 'Port of Buenos Aires', 6, 2100.0],
+            ['Port of Buenos Aires', 'Port of Santos', 6, 2100.0],
+            ['Port of Cartagena', 'Port of New York', 11, 3300.0],
+            ['Port of New York', 'Port of Cartagena', 11, 3300.0],
+            ['Port of Veracruz', 'Port of New York', 11, 3400.0],
+            ['Port of New York', 'Port of Veracruz', 11, 3400.0],
+            ['Port of Cartagena', 'Port of Veracruz', 9, 2800.0],
+            ['Port of Veracruz', 'Port of Cartagena', 9, 2800.0],
+            ['Port of New York', 'Port of Santos', 22, 7700.0],
+            ['Port of Santos', 'Port of New York', 22, 7700.0],
+            ['Port of Rotterdam', 'Port of Santos', 29, 10500.0],
+            ['Port of Santos', 'Port of Rotterdam', 29, 10500.0],
+
+            // --- Africa / Indian Ocean ---
+            ['Port of Walvis Bay', 'Port of Durban', 4, 1550.0],
+            ['Port of Durban', 'Port of Walvis Bay', 4, 1550.0],
+            ['Port of Mombasa', 'Port of Port Said', 15, 5200.0],
+            ['Port of Port Said', 'Port of Mombasa', 15, 5200.0],
+            ['Port of Lagos', 'Tanger Med', 11, 3200.0],
+            ['Tanger Med', 'Port of Lagos', 11, 3200.0],
+            ['Port of Durban', 'Port of Singapore', 25, 8300.0],
+            ['Port of Singapore', 'Port of Durban', 25, 8300.0],
+            ['Port of Mombasa', 'Port of Jebel Ali', 14, 4300.0],
+            ['Port of Jebel Ali', 'Port of Mombasa', 14, 4300.0],
+
+            // --- Oceania / Asia-Pacific ---
+            ['Port of Adelaide', 'Port of Singapore', 17, 5600.0],
+            ['Port of Singapore', 'Port of Adelaide', 17, 5600.0],
+            ['Port of Adelaide', 'Port of Shanghai', 21, 7200.0],
+            ['Port of Shanghai', 'Port of Adelaide', 21, 7200.0],
+            ['Port of Auckland', 'Port of Adelaide', 10, 3250.0],
+            ['Port of Adelaide', 'Port of Auckland', 10, 3250.0],
+            ['Port of Auckland', 'Port of Singapore', 21, 7200.0],
+            ['Port of Singapore', 'Port of Auckland', 21, 7200.0],
+
+            // --- Additional Americas (UNLOCODE): US Pacific/Gulf/Atlantic + Panama ---
+            ['Port of Seattle', 'Port of Vancouver', 1, 220.0],
+            ['Port of Vancouver', 'Port of Seattle', 1, 220.0],
+            ['Port of Seattle', 'Port of Los Angeles', 6, 1850.0],
+            ['Port of Los Angeles', 'Port of Seattle', 6, 1850.0],
+            ['Port of Miami', 'Port of New York', 7, 2100.0],
+            ['Port of New York', 'Port of Miami', 7, 2100.0],
+            ['Port of Savannah', 'Port of New York', 4, 1200.0],
+            ['Port of New York', 'Port of Savannah', 4, 1200.0],
+            ['Port of Miami', 'Port of Cartagena', 6, 1850.0],
+            ['Port of Cartagena', 'Port of Miami', 6, 1850.0],
+            ['Port of Colon', 'Port of Cartagena', 2, 450.0],
+            ['Port of Cartagena', 'Port of Colon', 2, 450.0],
+            ['Port of Colon', 'Port of Los Angeles', 22, 7500.0],
+            ['Port of Los Angeles', 'Port of Colon', 22, 7500.0],
+
+            // --- South / Southeast Asia & Indian Ocean (UNLOCODE) ---
+            ['Port of Busan', 'Port of Yokohama', 2, 1100.0],
+            ['Port of Yokohama', 'Port of Busan', 2, 1100.0],
+            ['Port of Busan', 'Port of Shanghai', 3, 950.0],
+            ['Port of Shanghai', 'Port of Busan', 3, 950.0],
+            ['Port of Busan', 'Port of Singapore', 12, 4800.0],
+            ['Port of Singapore', 'Port of Busan', 12, 4800.0],
+            ['Port of Shekou', 'Port of Shanghai', 3, 1400.0],
+            ['Port of Shanghai', 'Port of Shekou', 3, 1400.0],
+            ['Port of Shekou', 'Port of Singapore', 5, 2600.0],
+            ['Port of Singapore', 'Port of Shekou', 5, 2600.0],
+            ['Port of Mumbai', 'Port of Jebel Ali', 8, 3200.0],
+            ['Port of Jebel Ali', 'Port of Mumbai', 8, 3200.0],
+            ['Port of Mumbai', 'Port of Singapore', 12, 5200.0],
+            ['Port of Singapore', 'Port of Mumbai', 12, 5200.0],
+            ['Port of Colombo', 'Port of Singapore', 7, 3800.0],
+            ['Port of Singapore', 'Port of Colombo', 7, 3800.0],
+            ['Port of Colombo', 'Port of Mombasa', 7, 4200.0],
+            ['Port of Mombasa', 'Port of Colombo', 7, 4200.0],
+            ['Port of Klang', 'Port of Singapore', 1, 350.0],
+            ['Port of Singapore', 'Port of Klang', 1, 350.0],
+
+            // --- East Africa ---
+            ['Port of Dar es Salaam', 'Port of Mombasa', 2, 450.0],
+            ['Port of Mombasa', 'Port of Dar es Salaam', 2, 450.0],
+            ['Port of Dar es Salaam', 'Port of Durban', 6, 2800.0],
+            ['Port of Durban', 'Port of Dar es Salaam', 6, 2800.0],
         ];
     }
 

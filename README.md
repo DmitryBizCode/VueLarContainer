@@ -79,6 +79,7 @@ docker compose run --rm --no-deps node sh -c "npm install"
 
 - Додаток: `http://localhost` (порт змінюється через `NGINX_HTTP_PORT` у `.env`)
 - Vite: `http://localhost:5173`
+- Разом із стеком стартують **mailpit** (UI листів: `http://localhost:8025`, порти `MAILPIT_*` у `.env`), **queue** (`php artisan queue:work redis`) і **telegram** (long-poll бота). Для реальних листів і Redis-черги налаштуй `MAIL_*` та `QUEUE_CONNECTION=redis` у `.env`.
 - Після `db:seed` див. облікові записи в docblock [`DatabaseSeeder`](database/seeders/DatabaseSeeder.php): клієнти **`demo@example.com`** / **`password`**, адміни **`romeobackend@gmail.com`** / **`123456789`**, а також `admin2@demo.local`, `client2@demo.local` тощо. Демо-дані позначені `[demo-scenario:...]` у полях опису/теми (оренди, заявки, транзакції, activity log).
 
 Повністю скинути БД і named volumes (дані в Postgres / Redis / pgAdmin зникають):
@@ -90,6 +91,16 @@ docker compose exec php php artisan migrate:fresh --seed --force
 ```
 
 Без сідерів: заміни останній рядок на `php artisan migrate:fresh --force` (або `migrate --force`, якщо таблиці вже створені).
+
+### Морські полілінії на карті (`sea_path`)
+
+Після сидіння маршрути мають орієнтовні `distance` / `estimated_days`. Геометрію ліній для карти логістики будує сервіс **searoute** (контейнер `searoute`). Заповніть або оновіть збережені точки шляху:
+
+```bash
+docker compose exec php php artisan routes:build-sea-path --only-missing
+```
+
+Після зміни координат портів або списку ребер використайте `--force`, щоб перерахувати всі відкриті маршрути.
 
 ## IoT simulation: schedule vs worker
 

@@ -34,7 +34,7 @@ final class LogisticsMapGeometryService
     ): array {
         $merged = self::mergeSeaPathWithEndpoints($originLat, $originLng, $destLat, $destLng, $seaPath);
         if (count($merged) >= 3) {
-            return $merged;
+            return self::densifyPathAlongGreatCircles($merged);
         }
 
         $segments = self::greatCircleSegmentCount($originLat, $originLng, $destLat, $destLng);
@@ -61,7 +61,7 @@ final class LogisticsMapGeometryService
     ): ?array {
         $merged = self::mergeSeaPathWithEndpoints($originLat, $originLng, $destLat, $destLng, $seaPath);
         if (count($merged) >= 3) {
-            return $merged;
+            return self::densifyPathAlongGreatCircles($merged);
         }
 
         if (! self::REQUIRE_STORED_GEOMETRY_FOR_RENDER) {
@@ -235,6 +235,36 @@ final class LogisticsMapGeometryService
         }
         if (! self::coordsApproxEqual($out[count($out) - 1], [$destLat, $destLng])) {
             $out[] = [$destLat, $destLng];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Subdivide each leg so the map client (Leaflet: straight segments in Web Mercator) approximates
+     * great-circle arcs between stored waypoints, reducing false “land cuts” on long chords.
+     *
+     * @param  list<array{0: float, 1: float}>  $path
+     * @return list<array{0: float, 1: float}>
+     */
+    private static function densifyPathAlongGreatCircles(array $path): array
+    {
+        if (count($path) < 2) {
+            return $path;
+        }
+
+        $out = [];
+        for ($i = 0; $i < count($path) - 1; $i++) {
+            $a = $path[$i];
+            $b = $path[$i + 1];
+            $segments = self::greatCircleSegmentCount($a[0], $a[1], $b[0], $b[1]);
+            $chunk = self::greatCirclePolyline($a[0], $a[1], $b[0], $b[1], $segments);
+            if ($out !== []) {
+                array_shift($chunk);
+            }
+            foreach ($chunk as $p) {
+                $out[] = $p;
+            }
         }
 
         return $out;

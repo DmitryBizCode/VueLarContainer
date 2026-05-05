@@ -44,7 +44,7 @@ const countries = ref([
         image: '/image/services/UK.png',
         name: 'United Kingdom',
         description: 'Post-Brexit customs expertise including GVMS declarations, HMRC compliance, and Rules of Origin certification for preferential tariffs.',
-        ports: 'Felixstowe, Southampton, London Gateway',
+        ports: 'Rotterdam, Antwerp, Southampton',
         transit: '8–12 days',
         services: 'FCL / LCL',
         note: 'UK DMSCI pre-clearance',

@@ -1464,6 +1464,86 @@ class LogisticsMapDataTest extends TestCase
         $this->assertGreaterThanOrEqual(3, count($decoded));
     }
 
+    public function test_barcelona_genoa_route_has_offshore_sea_path_after_seeders(): void
+    {
+        $this->seed(CountrySeeder::class);
+        $this->seed(PortSeeder::class);
+        $this->seed(RouteSeeder::class);
+
+        $raw = DB::table('routes')
+            ->join('ports as o', 'o.id', '=', 'routes.origin_port_id')
+            ->join('ports as d', 'd.id', '=', 'routes.destination_port_id')
+            ->where('o.name', 'Port of Barcelona')
+            ->where('d.name', 'Port of Genoa')
+            ->value('routes.sea_path');
+
+        $this->assertNotNull($raw);
+        $decoded = is_string($raw) ? json_decode($raw, true, 512, JSON_THROW_ON_ERROR) : $raw;
+        $this->assertIsArray($decoded);
+        $this->assertGreaterThanOrEqual(3, count($decoded));
+    }
+
+    public function test_global_unlocode_hub_ports_exist_after_seeders(): void
+    {
+        $this->seed(CountrySeeder::class);
+        $this->seed(PortSeeder::class);
+
+        foreach (
+            [
+                'Port of Santos',
+                'Port of Vancouver',
+                'Port of Durban',
+                'Port of Adelaide',
+                'Port of Auckland',
+                'Port of Busan',
+                'Port of Mumbai',
+                'Port of Colon',
+                'Port of Dar es Salaam',
+                'Port of Seattle',
+            ] as $name
+        ) {
+            $this->assertDatabaseHas('ports', ['name' => $name]);
+        }
+    }
+
+    public function test_vancouver_los_angeles_route_exists_after_seeders(): void
+    {
+        $this->seed(CountrySeeder::class);
+        $this->seed(PortSeeder::class);
+        $this->seed(RouteSeeder::class);
+
+        $vancouverId = Port::query()->where('name', 'Port of Vancouver')->value('id');
+        $laId = Port::query()->where('name', 'Port of Los Angeles')->value('id');
+        $this->assertNotNull($vancouverId);
+        $this->assertNotNull($laId);
+        $this->assertTrue(
+            ShippingRoute::query()
+                ->where('origin_port_id', $vancouverId)
+                ->where('destination_port_id', $laId)
+                ->where('route_status', 'open')
+                ->exists()
+        );
+    }
+
+    public function test_busan_singapore_route_exists_after_seeders(): void
+    {
+        $this->seed(CountrySeeder::class);
+        $this->seed(PortSeeder::class);
+        $this->seed(RouteSeeder::class);
+
+        $busanId = Port::query()->where('name', 'Port of Busan')->value('id');
+        $singaporeId = Port::query()->where('name', 'Port of Singapore')->value('id');
+        $this->assertNotNull($busanId);
+        $this->assertNotNull($singaporeId);
+        $this->assertTrue(
+            ShippingRoute::query()
+                ->where('origin_port_id', $busanId)
+                ->where('destination_port_id', $singaporeId)
+                ->where('route_status', 'open')
+                ->exists()
+        );
+    }
+
     public function test_map_includes_vessel_when_current_port_not_on_logistics_whitelist(): void
     {
         config(['logistics_map.port_names' => ['Port of Rotterdam']]);

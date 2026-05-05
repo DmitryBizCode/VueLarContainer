@@ -20,12 +20,14 @@ class VesselSeeder extends Seeder
             $portIds['Port of Gdansk'] ?? null,
             $portIds['Port of Valencia'] ?? null,
             $portIds['Port of Piraeus'] ?? null,
-            $portIds['Port of Felixstowe'] ?? null,
+            $portIds['Port of Southampton'] ?? null,
             $portIds['Port of Odesa'] ?? null,
             $portIds['Port of Genoa'] ?? null,
             $portIds['Port of Bremerhaven'] ?? null,
             $portIds['Port of Le Havre'] ?? null,
             $portIds['Port of Barcelona'] ?? null,
+            $portIds['Port of Singapore'] ?? null,
+            $portIds['Port of Los Angeles'] ?? null,
         ])));
 
         if ($hubPorts !== [] && ! Vessel::query()->where('imo_number', 'like', '910%')->exists()) {
@@ -51,11 +53,7 @@ class VesselSeeder extends Seeder
             $extraPorts = array_values(array_unique(array_filter([
                 $portIds['Port of Amsterdam'] ?? null,
                 $portIds['Port of Zeebrugge'] ?? null,
-                $portIds['Port of Dunkirk'] ?? null,
                 $portIds['Port of Southampton'] ?? null,
-                $portIds['Port of London'] ?? null,
-                $portIds['Port of Dublin'] ?? null,
-                $portIds['Port of Cork'] ?? null,
                 $portIds['Port of Wilhelmshaven'] ?? null,
                 $portIds['Port of Kiel'] ?? null,
                 $portIds['Port of Aarhus'] ?? null,
@@ -92,6 +90,15 @@ class VesselSeeder extends Seeder
                 $portIds['Port of Limassol'] ?? null,
                 $portIds['Tanger Med'] ?? null,
                 $portIds['Port of Port Said'] ?? null,
+                $portIds['Port of Vancouver'] ?? null,
+                $portIds['Port of Santos'] ?? null,
+                $portIds['Port of Durban'] ?? null,
+                $portIds['Port of Adelaide'] ?? null,
+                $portIds['Port of Auckland'] ?? null,
+                $portIds['Port of Busan'] ?? null,
+                $portIds['Port of Mumbai'] ?? null,
+                $portIds['Port of Seattle'] ?? null,
+                $portIds['Port of Colon'] ?? null,
             ])));
 
             $barge = ['MV Coastal Trader', 'MV Sea Linker', 'MV North Pioneer', 'MV Atlantic Voyager', 'MV Aegean Spirit'];
