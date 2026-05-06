@@ -25,7 +25,7 @@ class DemoRentalsBulkSeeder extends Seeder
 
     public function run(): void
     {
-        $admin = User::query()->where('email', 'romeobackend@gmail.com')->first();
+        $admin = User::query()->where('email', 'admin@gmail.com')->first();
         $clients = [
             User::query()->where('email', 'demo@example.com')->first(),
             User::query()->where('email', 'client2@demo.local')->first(),

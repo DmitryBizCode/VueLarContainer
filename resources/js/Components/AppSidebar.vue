@@ -2,8 +2,9 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import QuickActionsNav from '@/Components/QuickActionsNav.vue';
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     quickActions: {
         type: Array,
         required: true,
@@ -35,6 +36,8 @@ defineProps({
 });
 
 defineEmits(['close-mobile']);
+
+const userFirstName = computed(() => (props.userName || '').split(' ')[0] || 'My');
 </script>
 
 <template>
@@ -46,7 +49,7 @@ defineEmits(['close-mobile']);
                     class="overflow-hidden whitespace-nowrap text-sm font-bold tracking-wide text-slate-800 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                     :class="collapsed && !mobile ? 'max-w-0 opacity-0' : 'max-w-[11rem] opacity-100'"
                 >
-                    Romeo Logistics
+                    {{ userFirstName }} Logistics
                 </span>
             </Link>
 

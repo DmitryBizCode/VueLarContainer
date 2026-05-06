@@ -46,17 +46,17 @@ const aboutCards = ref([
 const officeInfo = ref([
     {
         label: 'Address',
-        value: 'Gavrilishina 24, Kyiv, Ukraine',
+        value: 'Port Commerce Center, Suite 400',
         icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z',
     },
     {
         label: 'Phone',
-        value: '+38 (099) 547-23-54',
+        value: '+1 (800) 123-4567',
         icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
     },
     {
         label: 'Email',
-        value: 'dmitrybeznosiukcode@gmail.com',
+        value: 'info@logisticssway.com',
         icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     },
 ]);
@@ -109,7 +109,7 @@ const handleSubmit = () => {
 
 <template>
     <AppLayout active-route="contact">
-        <Head title="Contact Us — Logistics Co." />
+        <Head title="Contact Us — Logistics SWay" />
 
         <!-- Hero Section — Asymmetric like HomePage -->
         <section class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900">
@@ -149,7 +149,7 @@ const handleSubmit = () => {
                             <a href="#form" class="px-8 py-4 bg-yellow-400 text-blue-900 font-bold rounded-lg hover:bg-yellow-300 transition-colors shadow-lg">
                                 Send a Message
                             </a>
-                            <a href="tel:+380995472354" class="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/25 text-white font-bold rounded-lg hover:bg-white/20 transition-colors">
+                            <a href="tel:+18001234567" class="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/25 text-white font-bold rounded-lg hover:bg-white/20 transition-colors">
                                 Call Us Now
                             </a>
                         </div>
@@ -344,8 +344,8 @@ const handleSubmit = () => {
                                 <img src="/image/cont1.jpg" alt="Our Office" class="w-full h-44 object-cover" />
                                 <div class="absolute inset-0 bg-gradient-to-t from-blue-900/80 via-blue-900/20 to-transparent"></div>
                                 <div class="absolute bottom-4 left-5">
-                                    <div class="text-white font-bold">Logistics Co. HQ</div>
-                                    <div class="text-blue-200/80 text-xs">Kyiv, Ukraine · Since 2004</div>
+                                    <div class="text-white font-bold">Logistics SWay HQ</div>
+                                    <div class="text-blue-200/80 text-xs">Port Commerce Center</div>
                                 </div>
                             </div>
 

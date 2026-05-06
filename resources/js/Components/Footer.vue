@@ -11,7 +11,7 @@ import { Link } from '@inertiajs/vue3';
                     <!-- Company Info -->
                     <div>
                         <h5 class="text-white text-lg font-semibold uppercase mb-4 bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-                            Logistics Co.
+                            Logistics SWay
                         </h5>
                         <p class="text-sm leading-relaxed text-gray-400">
                             Providing comprehensive ocean freight and container rental services worldwide. 
@@ -52,20 +52,20 @@ import { Link } from '@inertiajs/vue3';
                                 <svg class="w-5 h-5 text-blue-400 mr-2 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                 </svg>
-                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">+38 (099) 547-23-54</span>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">+1 (800) 123-4567</span>
                             </li>
                             <li class="flex items-start group">
                                 <svg class="w-5 h-5 text-blue-400 mr-2 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
-                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">dmitrybeznosiukcode@gmail.com</span>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">info@logisticssway.com</span>
                             </li>
                             <li class="flex items-start group">
                                 <svg class="w-5 h-5 text-blue-400 mr-2 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">Gavrilishina 24, Kyiv, Ukraine</span>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">Port Commerce Center, Suite 400</span>
                             </li>
                         </ul>
                     </div>
@@ -126,7 +126,7 @@ import { Link } from '@inertiajs/vue3';
                 <div class="text-center pt-8 border-t border-gray-800">
                     <div class="h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent mb-6"></div>
                     <p class="text-sm text-gray-400">
-                        &copy; {{ new Date().getFullYear() }} Logistics Co. All rights reserved. | 
+                        &copy; {{ new Date().getFullYear() }} Logistics SWay. All rights reserved. |
                         <Link href="#" class="hover:text-blue-400 transition-colors duration-300">Privacy Policy</Link> | 
                         <Link href="#" class="hover:text-blue-400 transition-colors duration-300">Terms of Service</Link>
                     </p>

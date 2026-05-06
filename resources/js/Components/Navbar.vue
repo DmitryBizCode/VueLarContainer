@@ -45,16 +45,15 @@ onUnmounted(() => {
         >
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-20">
-                    <!-- Logo з анімацією -->
                     <div class="flex-shrink-0">
-                        <Link 
-                            href="/" 
+                        <Link
+                            href="/"
                             class="group flex items-center space-x-2"
                         >
                             <div class="relative">
                                 <div class="absolute inset-0 bg-blue-600 rounded-lg blur-md opacity-0 group-hover:opacity-75 transition-opacity duration-300 -z-10"></div>
                                 <div class="relative bg-gradient-to-br from-blue-600 to-blue-800 px-4 py-2 rounded-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-600/50">
-                                    <span class="text-xl font-bold text-white">Logistics Co.</span>
+                                    <span class="text-xl font-bold text-white">Logistics SWay</span>
                                 </div>
                             </div>
                         </Link>

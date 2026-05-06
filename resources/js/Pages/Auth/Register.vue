@@ -299,8 +299,7 @@ const submit = () => {
 
                 <button
                     type="submit"
-                    class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                    :class="{ 'opacity-70': form.processing }"
+                    class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all duration-300 hover:from-blue-700 hover:via-blue-800 hover:to-blue-700 hover:shadow-blue-600/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="form.processing"
                 >
                     Register
