@@ -30,6 +30,7 @@ class RegistrationTest extends TestCase
             'last_name' => 'User',
             'email' => 'test@example.com',
             'country_id' => $countryId,
+            'phone_number' => '+380441234567',
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);

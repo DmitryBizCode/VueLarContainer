@@ -55,6 +55,7 @@ class RegisteredUserController extends Controller
             'last_name' => 'required|string|max:50',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'country_id' => 'required|exists:countries,id',
+            'phone_number' => 'nullable|string|max:20',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -63,6 +64,7 @@ class RegisteredUserController extends Controller
             'last_name' => $request->string('last_name')->toString(),
             'email' => $request->email,
             'country_id' => $request->integer('country_id'),
+            'phone_number' => $request->string('phone_number')->toString() ?: null,
             'password' => Hash::make($request->password),
         ]);
 
