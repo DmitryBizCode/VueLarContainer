@@ -183,19 +183,29 @@ final class TelegramBotUpdateHandler
     {
         $t = trim($text);
         $map = [
+            // Legacy Cyrillic labels (older keyboards)
             'Помощь' => '/help',
             '❓ Помощь' => '/help',
+            'Проверить статус' => '/status',
+            'Привязать аккаунт' => '/link',
+            'Отключить уведомления' => '/unlink',
+            'Допомога' => '/help',
+            '❓ Допомога' => '/help',
+            'Статус' => '/status',
+            '📊 Статус' => '/status',
+            'Прив\'язати акаунт' => '/link',
+            'Вимкнути сповіщення' => '/unlink',
+            // English (current keyboard)
             'Help' => '/help',
             '❓ Help' => '/help',
             '📋 Help' => '/help',
             '📖 Help' => '/help',
-            'Проверить статус' => '/status',
             'Status' => '/status',
             '📊 Status' => '/status',
-            'Привязать аккаунт' => '/link',
+            'Link account' => '/link',
             'ℹ️ Link' => '/link',
             'How to link' => '/link',
-            'Отключить уведомления' => '/unlink',
+            'Disable notifications' => '/unlink',
             'Unlink' => '/unlink',
             '🔓 Unlink' => '/unlink',
         ];
@@ -211,12 +221,12 @@ final class TelegramBotUpdateHandler
         return [
             'keyboard' => [
                 [
-                    ['text' => 'Привязать аккаунт'],
-                    ['text' => 'Проверить статус'],
+                    ['text' => 'Link account'],
+                    ['text' => 'Status'],
                 ],
                 [
-                    ['text' => 'Отключить уведомления'],
-                    ['text' => 'Помощь'],
+                    ['text' => 'Disable notifications'],
+                    ['text' => 'Help'],
                 ],
             ],
             'resize_keyboard' => true,
@@ -248,16 +258,16 @@ final class TelegramBotUpdateHandler
         $app = e((string) config('app.name', 'App'));
 
         $body = <<<HTML
-✨ <b>Добро пожаловать!</b>
+✨ <b>Welcome!</b>
 
-<b>{$app}</b> — уведомления в Telegram.
+<b>{$app}</b> — notifications in Telegram.
 
-<b>Как подключить</b>
-1 · Личный кабинет → уведомления → <b>код привязки</b>
-2 · Нажмите <b>«Привязать аккаунт»</b> и отправьте код сюда
-3 · Или откройте ссылку с сайта (кнопка «Открыть в Telegram»)
+<b>How to connect</b>
+1 · Account → notifications → <b>link code</b>
+2 · Tap <b>«Link account»</b> and send the code here
+3 · Or open the link from the site (“Open in Telegram”)
 
-<b>Меню</b> — кнопки под полем ввода.
+<b>Menu</b> — buttons below the message field.
 HTML;
 
         $this->client->sendMessage($chatId, $body, [
@@ -271,15 +281,15 @@ HTML;
         $app = e((string) config('app.name', 'App'));
 
         $body = <<<HTML
-<b>{$app}</b> — команды
+<b>{$app}</b> — commands
 
-• <code>/start</code> — главное меню
-• <code>/link</code> — привязка (затем код из кабинета)
-• <code>/status</code> — статус привязки
-• <code>/unlink</code> — отключить этот Telegram
-• <code>/help</code> — эта подсказка
+• <code>/start</code> — main menu
+• <code>/link</code> — link (then the code from the site)
+• <code>/status</code> — link status
+• <code>/unlink</code> — unlink this Telegram chat
+• <code>/help</code> — this help
 
-Код одноразовый и с ограниченным сроком — при необходимости создайте новый в профиле.
+The code is single-use and expires — generate a new one in your profile if needed.
 HTML;
 
         $this->client->sendMessage($chatId, $body, [
@@ -307,10 +317,10 @@ HTML;
         $user = User::query()->find($link->user_id);
         $telegramOn = $user?->notification_telegram_enabled ?? false;
         $hint = $telegramOn
-            ? '✅ Привязано · доставка уведомлений <b>включена</b> в профиле'
-            : '✅ Привязано · включите канал Telegram в профиле, чтобы получать push';
+            ? '✅ Linked · Telegram notifications are <b>enabled</b> in your profile'
+            : '✅ Linked · enable the Telegram channel in your profile to receive pushes';
 
-        $body = "<b>Статус</b>\n{$hint}";
+        $body = "<b>Status</b>\n{$hint}";
 
         $this->client->sendMessage($chatId, $body, [
             'parse_mode' => 'HTML',
@@ -321,68 +331,68 @@ HTML;
     private function linkAwaitingCodeText(): string
     {
         return <<<'HTML'
-🔑 <b>Привязка аккаунта</b>
+🔑 <b>Account linking</b>
 
-Отправьте <b>одним сообщением</b> код из личного кабинета (раздел уведомлений).
+Send the <b>link code</b> from your account (notifications section) in <b>one message</b>.
 
-Срок действия кода ограничен. Если истёк — сгенерируйте новый на сайте.
+The code expires. If it has expired, generate a new one on the site.
 HTML;
     }
 
     private function unknownCommandText(): string
     {
         return <<<'HTML'
-Не понял запрос. Отправьте <b>код привязки</b> или нажмите <b>«Помощь»</b>.
+I did not understand. Send the <b>link code</b> or tap <b>«Help»</b>.
 HTML;
     }
 
     private function invalidCodeText(): string
     {
         return <<<'HTML'
-❌ Код недействителен или истёк. Создайте новый в личном кабинете.
+❌ Invalid or expired code. Create a new one in your account.
 HTML;
     }
 
     private function linkSuccessText(): string
     {
         return <<<'HTML'
-🎉 <b>Аккаунт подключён</b>
+🎉 <b>Account connected</b>
 
-Уведомления для этого Telegram <b>активированы</b> (если канал включён в профиле на сайте).
+Notifications for this Telegram are <b>active</b> (if the channel is enabled in your site profile).
 
-Вы будете получать важные события: заявки, сообщения и системные оповещения.
+You will receive important events: requests, messages, and system alerts.
 HTML;
     }
 
     private function alreadyLinkedText(): string
     {
         return <<<'HTML'
-✅ Этот Telegram уже привязан к вашему аккаунту на сайте. Данные обновлены.
+✅ This Telegram is already linked to your site account. Details updated.
 HTML;
     }
 
     private function telegramInUseByOtherAccountText(): string
     {
         return <<<'HTML'
-⛔️ Этот Telegram уже привязан к <b>другому</b> аккаунту на сайте.
+⛔️ This Telegram is already linked to a <b>different</b> site account.
 
-Один аккаунт Telegram нельзя связать с двумя разными профилями. Войдите на сайте под нужным пользователем или отвяжите Telegram в том профиле, где он подключён.
+One Telegram account cannot be linked to two profiles. Sign in as the correct user on the site or unlink Telegram from the profile where it is connected.
 HTML;
     }
 
     private function unlinkSuccessText(): string
     {
         return <<<'HTML'
-🔓 <b>Уведомления отключены</b> для этого чата.
+🔓 <b>Notifications disabled</b> for this chat.
 
-Подключить снова можно в любой момент через личный кабинет.
+You can connect again anytime from your account on the site.
 HTML;
     }
 
     private function statusNotLinkedText(): string
     {
         return <<<'HTML'
-Ещё не привязано. Получите код в личном кабинете и нажмите «Привязать аккаунт».
+Not linked yet. Get a code in your account (notifications) and tap «Link account».
 HTML;
     }
 }

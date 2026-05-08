@@ -149,8 +149,8 @@ const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
                             </label>
 
                             <div v-if="form.iot_active && sensorTypes?.length" class="mt-4 space-y-3 rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4">
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-800">Конструктор датчиків</h3>
-                                <p class="text-xs text-slate-600">Додайте або приберіть датчики для цього контейнера. Обов'язкові (двері, насос, рівень води, вентиляція) завжди увімкнені. Оберіть опційні:</p>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-800">Sensor builder</h3>
+                                <p class="text-xs text-slate-600">Add or remove sensors for this container. Required sensors (doors, pump, water level, ventilation) are always enabled. Choose optional ones:</p>
                                 <div class="grid gap-2 sm:grid-cols-2">
                                     <label
                                         v-for="st in sensorTypes"
@@ -167,7 +167,7 @@ const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
                                         />
                                         <span v-else class="inline-block h-4 w-4 rounded border border-slate-300 bg-slate-100 text-center text-[10px] leading-4">✓</span>
                                         <span>{{ st.name }}</span>
-                                        <span v-if="!st.is_optional" class="text-[10px] text-slate-400">(обов'язк.)</span>
+                                        <span v-if="!st.is_optional" class="text-[10px] text-slate-400">(required)</span>
                                     </label>
                                 </div>
                             </div>

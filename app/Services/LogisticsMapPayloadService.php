@@ -535,6 +535,7 @@ class LogisticsMapPayloadService
                 'route.originPort:id,name,latitude,longitude',
                 'route.destinationPort:id,name,latitude,longitude',
                 'items.rental:id,user_id,status,start_date,end_date',
+                'items.container:id,serial_number',
             ])
             ->get();
 
@@ -593,6 +594,11 @@ class LogisticsMapPayloadService
             });
             $rentalCargoCount = $cargoItems->count();
             $hasRentalCargo = $rentalCargoCount > 0;
+            $containerSerials = $cargoItems
+                ->map(fn ($item) => $item->container?->serial_number)
+                ->filter()
+                ->values()
+                ->all();
 
             // Same rental IDs as container markers: if the rental is on the map for this user, this leg is "yours".
             $isUserShipment = $shipment->items->contains(function ($item) use ($mapRentalIdSet) {
@@ -640,7 +646,9 @@ class LogisticsMapPayloadService
                 'shipment_status' => (string) $shipment->status,
                 'origin_name' => $o->name,
                 'destination_name' => $d->name,
+                'departure_date' => $depart?->toDateString(),
                 'arrival_date' => $shipment->arrival_date?->toDateString(),
+                'container_serials' => $containerSerials,
             ];
         }
 

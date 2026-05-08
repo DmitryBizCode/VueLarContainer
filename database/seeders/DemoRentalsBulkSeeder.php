@@ -170,7 +170,7 @@ class DemoRentalsBulkSeeder extends Seeder
                     'routing_mode' => 'cost',
                 ],
                 'status' => $status,
-                'is_telemetry_active' => in_array($status, ['in_progress', 'active', 'scheduled', 'approved'], true) && $idx % 2 === 0,
+                'is_telemetry_active' => in_array($status, ['in_progress', 'active', 'scheduled', 'approved'], true),
                 'payment_status' => $paymentStatus,
                 'reviewed_by' => $reviewedBy,
                 'reviewed_at' => $reviewedAt,
@@ -184,6 +184,10 @@ class DemoRentalsBulkSeeder extends Seeder
                 'cancellation_reason' => $cancellationReason,
                 'description' => $spec['title'].' '.$marker,
             ]);
+
+            if (\in_array($status, ['in_progress', 'active'], true)) {
+                Container::query()->whereKey($containerId)->update(['iot_active' => true]);
+            }
 
             if ($status === 'completed' && $paymentStatus === 'paid') {
                 if (Transaction::query()->where('rental_id', $rental->id)->exists()) {

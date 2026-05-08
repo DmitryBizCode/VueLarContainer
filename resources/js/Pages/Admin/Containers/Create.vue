@@ -150,7 +150,7 @@ const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
                             </label>
                             <div v-if="form.iot_active" class="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
                                 <h4 class="mb-3 text-sm font-semibold text-slate-700">IoT Sensors</h4>
-                                <p class="mb-3 text-xs text-slate-500">Обов'язкові сенсори (двері, насос, рівень води, вентиляція) додаються автоматично. Опційні можна обрати нижче.</p>
+                                <p class="mb-3 text-xs text-slate-500">Required sensors (doors, pump, water level, ventilation) are added automatically. Optional ones can be selected below.</p>
                                 <div class="space-y-2">
                                     <template v-for="st in optionalSensorTypes" :key="st.id">
                                         <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
@@ -160,7 +160,7 @@ const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
                                         </label>
                                     </template>
                                     <template v-if="mandatorySensorTypes.length">
-                                        <p class="mt-2 text-xs font-medium text-slate-600">Обов'язкові (read-only):</p>
+                                        <p class="mt-2 text-xs font-medium text-slate-600">Required (read-only):</p>
                                         <div class="flex flex-wrap gap-2">
                                             <span v-for="st in mandatorySensorTypes" :key="st.id" class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-800">
                                                 <span>✓</span> {{ st.name }}

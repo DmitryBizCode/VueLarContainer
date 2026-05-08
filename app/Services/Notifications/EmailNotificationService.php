@@ -27,7 +27,7 @@ class EmailNotificationService
         }
 
         try {
-            // send() — без другої черги на Mailable; разом із QUEUE_CONNECTION=sync не потрібен queue-воркер.
+            // send() — no extra Mailable queue; with QUEUE_CONNECTION=sync no queue worker is required.
             Mail::to($to)->send($mailable);
 
             return true;

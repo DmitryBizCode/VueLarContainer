@@ -79,18 +79,14 @@ function chartPointsTitle(sensor) {
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live conditions</p>
                 <h3 class="mt-1 text-lg font-bold text-slate-900">IoT sensors (last {{ periodHours }} h)</h3>
-                <p class="mt-1 text-xs text-slate-500">
-                    <template v-if="iotCharts?.series_mode === 'raw_tail'">
-                        Режим <strong>останніх {{ monitorChartCap }}</strong> точок: кожен графік — сирі злиті семпли з БД + Redis (не бакети за діапазоном дат).
-                        Діапазон дат лишається для блоку «Door events» та інших розділів.
+                <p class=”mt-1 text-xs text-slate-500”>
+                    <template v-if=”iotCharts?.series_mode === 'raw_tail'”>
+                        Showing the latest <strong>{{ monitorChartCap }}</strong> readings from active sensors.
+                        Date range applies to the “Door events” section below.
                     </template>
                     <template v-else>
-                        Up to <strong>{{ monitorChartCap }}</strong> time buckets <em>per sensor chart</em> across the selected window (aggregated
-                        from all samples in range, not only the last raw rows). Двері: на графіку лише зміни стану (відкр./закр.), без бакетної згладжувальної лінії.
-                        Cap: <code class="rounded bg-slate-100 px-0.5">IOT_MONITOR_CHART_MAX_POINTS</code> (default 30). If the DB sample count exceeds
-                        <code class="rounded bg-slate-100 px-0.5">IOT_MONITOR_CHART_WINDOW_SAMPLES_MAX</code>, stats may use the newest tail only
-                        (see “Stats truncated” on the card). Run <code class="rounded bg-slate-100 px-1 py-0.5 text-[10px]">simulation:worker</code> or
-                        <code class="rounded bg-slate-100 px-1 py-0.5 text-[10px]">schedule:work</code>.
+                        Sensor data aggregated into up to <strong>{{ monitorChartCap }}</strong> points per chart across the selected window.
+                        Door events show state changes only (open / closed).
                     </template>
                 </p>
             </div>
@@ -131,10 +127,10 @@ function chartPointsTitle(sensor) {
                     >
                         {{
                             sensor.source === 'telemetry'
-                                ? 'DB'
+                                ? 'Sensor'
                                 : sensor.source === 'defaults'
-                                  ? 'Seed + DB'
-                                  : 'demo'
+                                  ? 'Calibrated'
+                                  : 'Demo'
                         }}
                     </span>
                 </div>
@@ -157,7 +153,7 @@ function chartPointsTitle(sensor) {
                         <p class="font-medium text-slate-800">{{ formatStat(sensor.stats?.mean, sensor.decimals) }}</p>
                     </div>
                     <div class="sm:col-span-3">
-                        <span class="text-slate-400">Дисперсія коливань (σ²)</span>
+                        <span class="text-slate-400">Variance of fluctuations (σ²)</span>
                         <p class="font-mono text-xs font-semibold text-slate-800">{{ formatVariance(sensor.stats?.variance) }}</p>
                     </div>
                 </div>
@@ -167,36 +163,16 @@ function chartPointsTitle(sensor) {
                         <span>{{ sensor.unit }}</span>
                         <div
                             v-if="sensor.series?.length"
-                            class="max-w-[min(100%,22rem)] text-right leading-snug"
-                            :title="chartPointsTitle(sensor)"
+                            class="flex flex-wrap items-center gap-1 text-right leading-snug"
                         >
-                            <span class="font-medium text-slate-600">On chart:</span>
-                            {{ pointsOnChart(sensor) }} / max {{ sensor.chart_max_points ?? 30 }}
-                            <template v-if="sensor.samples_in_range != null">
-                                <span class="text-slate-400"> · </span>
-                                <span class="font-medium text-slate-600">In window (DB+buffer):</span>
-                                {{ sensor.samples_in_range }}
-                                <template v-if="sensor.buffer_samples_in_range > 0">
-                                    <span class="text-slate-400"> · </span>
-                                    <span class="font-medium text-amber-800/90" title="Samples still in Redis, merged until the minute flush">Buffer:</span>
-                                    {{ sensor.buffer_samples_in_range }}
-                                </template>
-                            </template>
-                            <template v-else>
-                                <span class="text-slate-400"> · </span>
-                                <span class="text-amber-700/90">Synthetic (not DB)</span>
-                            </template>
+                            <span class="font-medium text-slate-600">{{ pointsOnChart(sensor) }} pts</span>
                             <template v-if="sensor.used_extended_lookback">
-                                <span class="text-slate-400"> · </span>
-                                <span class="font-medium text-sky-700/90" title="No samples in the selected time window; showing the latest points from a longer lookback.">
-                                    Extended lookback
-                                </span>
+                                <span class="text-slate-400">·</span>
+                                <span class="font-medium text-sky-700/90" title="No data in selected range; showing most recent available readings.">Extended range</span>
                             </template>
                             <template v-if="sensor.stats_truncated">
-                                <span class="text-slate-400"> · </span>
-                                <span class="font-medium text-rose-700/90" title="Too many DB rows in the window; stats use the newest chunk only (see IOT_MONITOR_CHART_WINDOW_SAMPLES_MAX).">
-                                    Stats truncated
-                                </span>
+                                <span class="text-slate-400">·</span>
+                                <span class="font-medium text-rose-700/90" title="Very large dataset; statistics are based on the most recent readings.">Partial stats</span>
                             </template>
                         </div>
                     </div>
@@ -220,7 +196,7 @@ function chartPointsTitle(sensor) {
                 <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                     <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Door events</p>
                     <p class="mt-1 text-[10px] leading-snug text-slate-500">
-                        From <code class="rounded bg-white px-0.5">door_open</code> telemetry for this rental (state changes only). Demo mode uses a placeholder timeline.
+                        State changes (open / closed) recorded by the door sensor for this rental period.
                     </p>
                     <ul v-if="doorEvents.length" class="mt-2 space-y-1.5 text-xs text-slate-700">
                         <li
@@ -251,14 +227,13 @@ function chartPointsTitle(sensor) {
 
             <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs text-emerald-900 lg:col-span-2">
                 <p class="font-semibold">Fluctuation analytics</p>
-                <p class="mt-1 leading-relaxed">
-                    <template v-if="iotCharts?.series_mode === 'raw_tail'">
-                        У режимі «останні N» показники min / max / mean / σ² рахуються <strong>лише по тих точках, що на лінії</strong> (останні злиті семпли).
+                <p class=”mt-1 leading-relaxed”>
+                    <template v-if=”iotCharts?.series_mode === 'raw_tail'”>
+                        Statistics (min / max / mean / σ²) are computed from the latest readings shown on the chart.
                     </template>
                     <template v-else>
-                        Min, max, mean, and variance use <strong>all samples in the selected window</strong> that were loaded for that sensor (DB plus
-                        buffer in range), not only the bucketed line. If “Stats truncated” appears, the window had more DB rows than
-                        <code class="rounded bg-white px-0.5">IOT_MONITOR_CHART_WINDOW_SAMPLES_MAX</code> and older rows were omitted from stats.
+                        Statistics use <strong>all readings in the selected window</strong>, not only the chart points.
+                        If “Partial stats” appears, only the most recent readings were used due to the large dataset size.
                     </template>
                 </p>
             </div>

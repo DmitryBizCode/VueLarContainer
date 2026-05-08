@@ -134,6 +134,12 @@ function defaultChartRangeIso() {
 }
 
 const MAX_RANGE_MS = 168 * 3600 * 1000;
+function onDateRangeReset() {
+    if (chartSeriesMode.value !== 'window') {
+        chartSeriesMode.value = 'window';
+    }
+}
+
 /** Toggle raw tail vs window; changing the date range always switches back to window (see watch below). */
 function toggleRawTailChartMode() {
     chartSeriesMode.value = chartSeriesMode.value === 'raw_tail' ? 'window' : 'raw_tail';
@@ -374,6 +380,7 @@ watch(
                             :rental-id="props.rental.id"
                             :date-from="iotCharts?.date_from ?? props.iot_charts?.date_from"
                             :date-to="iotCharts?.date_to ?? props.iot_charts?.date_to"
+                            @mode-reset="onDateRangeReset"
                         />
                         <button
                             type="button"
@@ -386,12 +393,12 @@ watch(
                             :aria-pressed="chartSeriesMode === 'raw_tail'"
                             :title="
                                 chartSeriesMode === 'raw_tail'
-                                    ? 'Натисніть, щоб знову показувати графіки за обраним періодом'
-                                    : 'Останні точки з БД і буфера, не за діапазоном дат'
+                                    ? 'Click to show charts for the selected date range again'
+                                    : 'Latest points from DB and buffer, not tied to the date range'
                             "
                             @click="toggleRawTailChartMode"
                         >
-                            Останні {{ rawTailCapLabel }} (БД+буфер)
+                            Latest readings
                         </button>
                     </div>
                     <MonitorChartProfileToolbar

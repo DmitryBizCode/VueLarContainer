@@ -452,7 +452,7 @@ const processes = ref([
                             :key="index"
                             class="group relative flex flex-col items-center"
                         >
-                            <!-- Кружочок з цифрою вище картки -->
+                            <!-- Step badge above card -->
                             <div class="mb-4 relative z-30">
                                 <div class="w-16 h-16 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-yellow-400 rounded-full flex items-center justify-center font-bold text-lg shadow-lg border-4 border-white group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-blue-600/50 transition-all duration-300">
                                     <div class="absolute inset-0 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-full"></div>
@@ -460,7 +460,7 @@ const processes = ref([
                                 </div>
                             </div>
                             
-                            <!-- Плавна з'єднувальна лінія між блоками (тільки на десктопі) -->
+                            <!-- Connector line between steps (desktop only) -->
                             <div v-if="index < processes.length - 1" class="hidden lg:block absolute top-6 left-1/2 w-full z-0 pointer-events-none" style="width: calc(100% + 2rem); left: calc(50% + 1rem);">
                                 <svg class="w-full h-8" viewBox="0 0 200 32" preserveAspectRatio="none" style="height: 32px;">
                                     <defs>
@@ -482,7 +482,7 @@ const processes = ref([
                                 </svg>
                             </div>
                             
-                            <!-- Картка -->
+                            <!-- Card -->
                             <div class="bg-white rounded-xl p-6 border-2 border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-white w-full relative z-20 cursor-pointer">
                                 <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-900 transition-colors text-center">{{ process.title }}</h3>
                                 <p class="text-gray-600 text-sm leading-relaxed text-center">{{ process.description }}</p>

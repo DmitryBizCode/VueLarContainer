@@ -155,7 +155,7 @@ const closeStatusNotes = () => {
             :key="`iot-latest-${pollRevision}`"
             class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4"
         >
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-800">Останній знімок (БД + буфер Redis)</p>
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-800">Latest snapshot (DB + Redis buffer)</p>
             <p v-if="iotLatest.recorded_at" class="mt-1 text-[11px] text-emerald-700/90">
                 {{ formatDate(iotLatest.recorded_at) }}
             </p>

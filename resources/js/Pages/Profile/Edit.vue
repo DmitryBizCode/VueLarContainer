@@ -505,7 +505,7 @@ const saveNotificationChannels = () => {
                                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200/80 text-sm font-bold text-slate-800"
                                             >2</span
                                         >
-                                        <span class="text-xs font-medium leading-snug text-slate-700">Open the bot, tap «Привязать аккаунт» or paste the code</span>
+                                        <span class="text-xs font-medium leading-snug text-slate-700">Open the bot, tap «Link account» or paste the code</span>
                                     </li>
                                     <li
                                         class="flex gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-300"

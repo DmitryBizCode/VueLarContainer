@@ -17,8 +17,8 @@ return [
     'definitions' => [
 
         'temperature_c' => [
-            'label' => 'Температура',
-            'description' => 'Внутрішня температура вантажного відсіку',
+            'label' => 'Temperature',
+            'description' => 'Internal cargo hold temperature',
             'unit' => '°C',
             'decimals' => 1,
             'stroke' => '#2563eb',
@@ -27,8 +27,8 @@ return [
         ],
 
         'humidity_rh' => [
-            'label' => 'Вологість',
-            'description' => 'Відносна вологість повітря (RH)',
+            'label' => 'Humidity',
+            'description' => 'Relative humidity (RH)',
             'unit' => '%',
             'decimals' => 1,
             'stroke' => '#0891b2',
@@ -38,7 +38,7 @@ return [
 
         'co2_ppm' => [
             'label' => 'CO₂',
-            'description' => 'Концентрація вуглекислого газу',
+            'description' => 'Carbon dioxide concentration',
             'unit' => 'ppm',
             'decimals' => 0,
             'stroke' => '#d97706',
@@ -47,8 +47,8 @@ return [
         ],
 
         'noise_db' => [
-            'label' => 'Шум',
-            'description' => 'Рівень шуму всередині контейнера',
+            'label' => 'Noise',
+            'description' => 'Noise level inside the container',
             'unit' => 'dB',
             'decimals' => 1,
             'stroke' => '#7c3aed',
@@ -57,8 +57,8 @@ return [
         ],
 
         'pressure_hpa' => [
-            'label' => 'Тиск',
-            'description' => 'Атмосферний тиск (еквівалент)',
+            'label' => 'Pressure',
+            'description' => 'Atmospheric pressure (equivalent)',
             'unit' => 'hPa',
             'decimals' => 1,
             'stroke' => '#475569',
@@ -67,8 +67,8 @@ return [
         ],
 
         'door_open' => [
-            'label' => 'Двері',
-            'description' => 'Стан відкриття дверей',
+            'label' => 'Doors',
+            'description' => 'Door open/closed state',
             'unit' => '',
             'decimals' => 0,
             'stroke' => '#059669',
@@ -77,8 +77,8 @@ return [
         ],
 
         'pump_running' => [
-            'label' => 'Насос',
-            'description' => 'Дренажний насос',
+            'label' => 'Pump',
+            'description' => 'Drainage pump',
             'unit' => '',
             'decimals' => 0,
             'stroke' => '#0d9488',
@@ -87,8 +87,8 @@ return [
         ],
 
         'water_level_pct' => [
-            'label' => 'Рівень води',
-            'description' => 'Відсоток заповнення',
+            'label' => 'Water level',
+            'description' => 'Fill percentage',
             'unit' => '%',
             'decimals' => 1,
             'stroke' => '#0284c7',
@@ -97,8 +97,8 @@ return [
         ],
 
         'ventilation_on' => [
-            'label' => 'Вентиляція',
-            'description' => 'Стан вентиляції',
+            'label' => 'Ventilation',
+            'description' => 'Ventilation on/off',
             'unit' => '',
             'decimals' => 0,
             'stroke' => '#6366f1',

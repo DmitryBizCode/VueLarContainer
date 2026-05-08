@@ -13,13 +13,13 @@
     }
 }
 
-/* Плавні переходи між секціями */
+/* Smooth transitions between sections */
 section {
     scroll-margin-top: 80px;
     transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Анімації появи при скролі */
+/* Scroll reveal animations */
 @keyframes fade-in-up {
     from {
         opacity: 0;
@@ -84,7 +84,7 @@ section {
     opacity: 0;
 }
 
-/* Плавні переходи для карток */
+/* Card hover transitions */
 .card-hover {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -93,12 +93,12 @@ section {
     transform: translateY(-8px) scale(1.02);
 }
 
-/* Плавний скрол */
+/* Smooth scrolling */
 html {
     scroll-behavior: smooth;
 }
 
-/* Повністю приховати скролбар */
+/* Hide scrollbars */
 ::-webkit-scrollbar {
     width: 0px;
     background: transparent;
@@ -112,17 +112,17 @@ html {
     background: transparent;
 }
 
-/* Для Firefox */
+/* Firefox */
 * {
     scrollbar-width: none;
 }
 
-/* Для IE та Edge */
+/* IE / legacy Edge */
 * {
     -ms-overflow-style: none;
 }
 
-/* Select: відступ справа щоб іконка chevron не наїжджала на текст */
+/* Select: right padding so chevron does not overlap text */
 select {
     padding-right: 2rem !important;
 }

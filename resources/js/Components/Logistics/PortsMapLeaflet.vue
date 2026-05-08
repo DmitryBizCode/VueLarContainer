@@ -71,6 +71,8 @@ const buildLeafletIcon = (L, kind, { heading = 0 } = {}) => {
     });
 };
 
+const fmt = (s) => String(s || '').replaceAll('_', ' ');
+
 const fmtDate = (v) => {
     if (!v) return null;
     try {
@@ -94,6 +96,14 @@ const shortPortName = (name) => {
     if (!name) return '';
     let s = String(name).replace(/^Port of /i, '').trim();
     if (s.length > 16) s = `${s.slice(0, 14)}…`;
+    return s;
+};
+
+/** Slightly longer version for vessel route display */
+const medPortName = (name) => {
+    if (!name) return '';
+    let s = String(name).replace(/^Port of /i, '').trim();
+    if (s.length > 22) s = `${s.slice(0, 20)}…`;
     return s;
 };
 
@@ -322,28 +332,77 @@ onMounted(async () => {
             });
         }
 
-        const fmt = (s) => String(s || '').replaceAll('_', ' ');
-        const vesselPopupLines = (vp) => {
-            const o = shortPortName(vp.origin_name);
-            const d = shortPortName(vp.destination_name);
-            const bits = [];
-            if (o && d) {
-                bits.push(`<span style="font-size:9px;color:#475569">${escapeHtml(o)}→${escapeHtml(d)}</span>`);
-            }
-            if (vp.arrival_date) {
-                const eta = fmtDate(vp.arrival_date);
-                bits.push(`<span style="font-size:9px;color:#0369a1">↓${eta}</span>`);
-            }
-            const n = Number(vp.rental_cargo_count) || 0;
-            if (vp.has_rental_cargo && n > 1) {
-                bits.push(`<span style="font-size:9px;color:#0d9488">${n} ctr</span>`);
+        const buildVesselPopup = (vp) => {
+            const isMine = Boolean(vp.is_user_shipment);
+            const statusStr = String(vp.shipment_status || '').toLowerCase();
+            const isActive = ['in_transit', 'in_progress'].includes(statusStr);
+            const statusLabel = isActive ? 'In Transit'
+                : statusStr === 'scheduled' ? 'Scheduled'
+                : statusStr.replace(/_/g, ' ');
+
+            const vname = String(vp.vessel_name || 'Vessel').length > 24
+                ? `${String(vp.vessel_name).slice(0, 22)}…`
+                : (vp.vessel_name || 'Vessel');
+
+            const o = medPortName(vp.origin_name);
+            const d = medPortName(vp.destination_name);
+            const depDate = vp.departure_date ? fmtDate(vp.departure_date) : null;
+            const eta = vp.arrival_date ? fmtDate(vp.arrival_date) : null;
+            const serials = Array.isArray(vp.container_serials) ? vp.container_serials : [];
+
+            const infoRow = (label, value, valueColor = '#334155') =>
+                `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;gap:8px">
+                    <span style="font-size:9px;color:#94a3b8;font-weight:500;white-space:nowrap">${label}</span>
+                    <span style="font-size:10px;color:${valueColor};font-weight:600;text-align:right">${value}</span>
+                </div>`;
+
+            const routeBlock = (o && d) ? `
+                <div style="display:grid;grid-template-columns:1fr 16px 1fr;align-items:center;padding:6px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;margin:6px 0 5px">
+                    <div>
+                        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:2px">From</div>
+                        <div style="font-size:10px;font-weight:700;color:#0f172a;line-height:1.2">${escapeHtml(o)}</div>
+                    </div>
+                    <div style="text-align:center;color:#cbd5e1;font-size:13px">→</div>
+                    <div style="text-align:right">
+                        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:2px">To</div>
+                        <div style="font-size:10px;font-weight:700;color:#0f172a;line-height:1.2">${escapeHtml(d)}</div>
+                    </div>
+                </div>` : '';
+
+            let cargoRow = '';
+            if (serials.length > 0) {
+                const serialTags = serials
+                    .map((s) => `<span style="display:inline-block;font-size:8px;font-weight:600;font-family:ui-monospace,monospace;padding:1px 4px;border-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d">${escapeHtml(String(s))}</span>`)
+                    .join(' ');
+                cargoRow = `<div style="padding:3px 0">
+                    <div style="font-size:9px;color:#94a3b8;font-weight:500;margin-bottom:3px">Containers</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:2px">${serialTags}</div>
+                </div>`;
             } else if (vp.has_rental_cargo) {
-                bits.push('<span style="font-size:9px;color:#0d9488">cargo</span>');
+                const n = Number(vp.rental_cargo_count) || 1;
+                cargoRow = infoRow('Cargo', `${n} container${n !== 1 ? 's' : ''}`, '#0d9488');
             }
-            if (vp.is_user_shipment) {
-                bits.push('<span style="font-size:9px;color:#2563eb;font-weight:600">yours</span>');
-            }
-            return bits.join(' · ');
+
+            const infoRows = [
+                depDate ? infoRow('Departed', escapeHtml(depDate)) : '',
+                eta ? infoRow('ETA', escapeHtml(eta), '#0369a1') : '',
+                cargoRow,
+            ].filter(Boolean).join('');
+
+            const mineBadge = isMine ? `
+                <div style="margin-top:6px;padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;text-align:center">
+                    <span style="font-size:8px;font-weight:700;letter-spacing:0.08em;color:#1d4ed8">YOUR SHIPMENT</span>
+                </div>` : '';
+
+            return `<div style="font-family:ui-sans-serif,system-ui,sans-serif;min-width:190px;max-width:230px;padding:1px 2px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
+                    <span style="font-size:11px;font-weight:700;color:#0f172a;line-height:1.3;flex:1;min-width:0">${escapeHtml(vname)}</span>
+                    <span style="flex-shrink:0;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:2px 6px;border-radius:999px;background:${isActive ? '#dbeafe' : '#f1f5f9'};color:${isActive ? '#1d4ed8' : '#64748b'}">${escapeHtml(statusLabel)}</span>
+                </div>
+                ${routeBlock}
+                ${infoRows ? `<div>${infoRows}</div>` : ''}
+                ${mineBadge}
+            </div>`;
         };
 
         fleetSorted.forEach((vp) => {
@@ -352,23 +411,13 @@ onMounted(async () => {
             }
             const plat = vp._displayLat ?? vp.latitude;
             const plng = vp._displayLng ?? vp.longitude;
-            const hasRental = Boolean(vp.has_rental_cargo);
             const isMine = Boolean(vp.is_user_shipment);
-            const status = String(vp.shipment_status || '').toLowerCase();
             const heading = Number(vp.heading ?? 0);
 
-            let kind;
-            kind = isMine ? 'vessel_user' : 'vessel_fleet';
+            const kind = isMine ? 'vessel_user' : 'vessel_fleet';
             const icon = buildLeafletIcon(L, kind, { heading });
             const m = L.marker([plat, plng], { icon }).addTo(map);
-            const vname = String(vp.vessel_name || 'Vessel').length > 22
-                ? `${String(vp.vessel_name).slice(0, 20)}…`
-                : (vp.vessel_name || 'Vessel');
-            const header = `${isMine ? '▶ ' : ''}${escapeHtml(vname)}`;
-            m.bindPopup(
-                `<div style="max-width:220px"><strong style="font-size:11px">${header}</strong><br>${vesselPopupLines(vp)}</div>`,
-                { maxWidth: 230, className: 'logistics-map-popup-wrap' },
-            );
+            m.bindPopup(buildVesselPopup(vp), { maxWidth: 240, className: 'logistics-map-popup-wrap' });
             mapLayers.push(m);
         });
 
@@ -433,7 +482,10 @@ onMounted(async () => {
             map.fitBounds(group.getBounds().pad(0.15));
         }
     } catch (e) {
-        loadError.value = 'Unable to load map data. Try again later.';
+        console.error('[PortsMapLeaflet] load error:', e?.response?.status, e?.response?.data ?? e?.message ?? e);
+        loadError.value = e?.response?.status
+            ? `Unable to load map data (HTTP ${e.response.status}). Check console for details.`
+            : 'Unable to load map data. Try again later.';
     }
 });
 
@@ -467,7 +519,7 @@ onBeforeUnmount(() => {
 <style>
 /* Popup pane lives under the map div; class is unique to this map. */
 .logistics-map-popup-wrap .leaflet-popup-content {
-    margin: 6px 8px;
-    line-height: 1.2;
+    margin: 8px 10px;
+    line-height: 1.35;
 }
 </style>

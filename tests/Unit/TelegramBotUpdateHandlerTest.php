@@ -129,7 +129,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'Статус') && str_contains($text, 'Привязано');
+            return str_contains($text, 'Status') && str_contains($text, 'Linked');
         });
     }
 
@@ -144,13 +144,13 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'привязано') || str_contains($text, 'Ещё не');
+            return str_contains($text, 'Not linked yet');
         });
     }
 
     public function test_keyboard_help_label_triggers_help(): void
     {
-        $this->makeHandler()->handleIncomingText(1, 'Помощь');
+        $this->makeHandler()->handleIncomingText(1, 'Help');
 
         Http::assertSent(function ($request) {
             if (! str_contains($request->url(), 'sendMessage')) {
@@ -212,7 +212,7 @@ class TelegramBotUpdateHandlerTest extends TestCase
             $body = $request->data();
             $text = (string) ($body['text'] ?? '');
 
-            return str_contains($text, 'код') || str_contains($text, 'Привязк');
+            return str_contains($text, 'code') || str_contains($text, 'link');
         });
     }
 

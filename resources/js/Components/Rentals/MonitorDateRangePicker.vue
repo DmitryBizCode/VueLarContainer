@@ -8,6 +8,8 @@ const props = defineProps({
     rentalId: { type: [Number, String], required: true },
 });
 
+const emit = defineEmits(['mode-reset']);
+
 /** Avoid RangeError from Date#toISOString on invalid input (breaks whole Monitor page). */
 function toDatetimeLocalSlice(value) {
     if (!value) return '';
@@ -31,6 +33,7 @@ function applyRange() {
     const from = (fromInput.value || fromDisplay.value || '').toString().slice(0, 19);
     const to = (toInput.value || toDisplay.value || '').toString().slice(0, 19);
     if (from && to) {
+        emit('mode-reset');
         router.get(route('rentals.monitor', props.rentalId), { from, to }, { preserveState: true });
     }
 }
@@ -39,6 +42,7 @@ function setPreset(hours) {
     const end = new Date();
     const start = new Date(end);
     start.setHours(start.getHours() - hours);
+    emit('mode-reset');
     router.get(route('rentals.monitor', props.rentalId), {
         from: start.toISOString().slice(0, 19),
         to: end.toISOString().slice(0, 19),

@@ -14,7 +14,7 @@ final class TelegramBotClient
     /**
      * Bump when changing {@see defaultBotCommands()} so poll re-runs setMyCommands.
      */
-    public const MY_COMMANDS_VERSION = 3;
+    public const MY_COMMANDS_VERSION = 4;
 
     public function __construct(
         private readonly string $token,
@@ -32,11 +32,11 @@ final class TelegramBotClient
     public static function defaultBotCommands(): array
     {
         return [
-            ['command' => 'start', 'description' => 'Главное меню и приветствие'],
-            ['command' => 'link', 'description' => 'Привязать аккаунт (код из кабинета)'],
-            ['command' => 'status', 'description' => 'Проверить статус привязки'],
-            ['command' => 'unlink', 'description' => 'Отвязать этот Telegram'],
-            ['command' => 'help', 'description' => 'Справка по командам'],
+            ['command' => 'start', 'description' => 'Main menu and welcome'],
+            ['command' => 'link', 'description' => 'Link account (code from the site)'],
+            ['command' => 'status', 'description' => 'Check link status'],
+            ['command' => 'unlink', 'description' => 'Unlink this Telegram chat'],
+            ['command' => 'help', 'description' => 'Command help'],
         ];
     }
 
