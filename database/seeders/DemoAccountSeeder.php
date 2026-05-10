@@ -21,7 +21,7 @@ class DemoAccountSeeder extends Seeder
         $countryId = Country::query()->orderBy('id')->value('id');
 
         $admins = [
-            ['email' => 'romeobackend@gmail.com', 'first_name' => 'Romeo', 'last_name' => 'Back', 'company_name' => 'VueLar Demo'],
+            ['email' => 'admin@gmail.com', 'first_name' => 'Admin', 'last_name' => 'Admin', 'company_name' => 'Admin Demo'],
             ['email' => 'admin2@demo.local', 'first_name' => 'Sofia', 'last_name' => 'Martinez', 'company_name' => 'VueLar Operations'],
             ['email' => 'admin3@demo.local', 'first_name' => 'Jonas', 'last_name' => 'Lindqvist', 'company_name' => 'Nordic Fleet Admin'],
         ];
