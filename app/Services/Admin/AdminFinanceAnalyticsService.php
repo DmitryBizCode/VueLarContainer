@@ -92,7 +92,7 @@ class AdminFinanceAnalyticsService
         $end = Carbon::now()->endOfMonth();
 
         $labelExpr = match (DB::connection()->getDriverName()) {
-            'pgsql' => "COALESCE(o.name, '—') || ' → ' || COALESCE(d.name, '—')",
+            'pgsql', 'sqlite' => "COALESCE(o.name, '—') || ' → ' || COALESCE(d.name, '—')",
             default => "CONCAT(COALESCE(o.name, '—'), ' → ', COALESCE(d.name, '—'))",
         };
 
