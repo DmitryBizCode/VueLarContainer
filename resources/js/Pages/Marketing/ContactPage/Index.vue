@@ -24,19 +24,19 @@ const subjects = ref([
 
 const aboutCards = ref([
     {
-        image: '/image/contact1.webp',
+        image: '/image/photo/Our_Mission.png',
         title: 'Our Mission',
         description: 'Efficient, innovative, and reliable shipping solutions for clients worldwide. We invest in technology and people to make global logistics seamless.',
         icon: 'M13 10V3L4 14h7v7l9-11h-7z',
     },
     {
-        image: '/image/contact2.webp',
+        image: '/image/photo/Our_Vision.png',
         title: 'Our Vision',
         description: 'To be the most trusted logistics partner for global trade, setting industry standards for transparency, service quality, and innovation.',
         icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
     },
     {
-        image: '/image/contact3.webp',
+        image: '/image/photo/Our_Values.png',
         title: 'Our Values',
         description: 'Commitment to quality, integrity, and respect. Every shipment matters — we treat your cargo with the same care we would our own.',
         icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
@@ -112,11 +112,12 @@ const handleSubmit = () => {
         <Head title="Contact Us — Logistics SWay" />
 
         <!-- Hero Section — Asymmetric like HomePage -->
-        <section class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900">
-            <div class="absolute inset-0">
-                <img src="/image/cont1.jpg" alt="Contact Background" class="w-full h-full object-cover opacity-10" />
-                <div class="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-blue-900/85 to-blue-800/90"></div>
-            </div>
+        <section
+            class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900 bg-cover bg-center bg-no-repeat"
+            style="background-image: url('/image/photo/main_back.png');"
+        >
+            <!-- Dark overlay for readable text on top of the photo -->
+            <div class="absolute inset-0 bg-blue-900/60"></div>
             <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-yellow-400/8 to-transparent"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-700 rounded-full blur-3xl opacity-20"></div>
             <div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;40&quot; height=&quot;40&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M0 0h40v40H0z&quot; fill=&quot;none&quot; stroke=&quot;white&quot; stroke-width=&quot;0.5&quot;/%3E%3C/svg%3E'); background-size: 40px 40px;"></div>

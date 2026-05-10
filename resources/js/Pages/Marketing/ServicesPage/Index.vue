@@ -139,7 +139,7 @@ const orderSteps = ref([
 
 const sensors = ref([
     {
-        image: '/image/services/temperature.webp',
+        image: '/image/photo/IoTsensor_Temperature.png',
         name: 'Temperature',
         description: 'Continuous monitoring for perishables, pharmaceuticals, and chemicals. Configurable alert thresholds with instant notification.',
         range: '-30°C to +70°C',
@@ -147,7 +147,7 @@ const sensors = ref([
         color: 'from-red-500 to-orange-500',
     },
     {
-        image: '/image/services/humidity.webp',
+        image: '/image/photo/IoTsensor_Humidity.png',
         name: 'Humidity',
         description: 'Prevents condensation damage (container rain) for electronics, textiles, and food products. Dew point calculation included.',
         range: '0–100% RH',
@@ -155,7 +155,7 @@ const sensors = ref([
         color: 'from-cyan-500 to-blue-500',
     },
     {
-        image: '/image/services/vibrometer.webp',
+        image: '/image/photo/IoTsensor_Vibration.png',
         name: 'Vibration',
         description: 'Tri-axis accelerometer detects impacts, rough handling, and excessive vibration. Event logging with timestamp and g-force magnitude.',
         range: '0–50 g',
@@ -163,7 +163,7 @@ const sensors = ref([
         color: 'from-purple-500 to-indigo-500',
     },
     {
-        image: '/image/services/incline.webp',
+        image: '/image/photo/IoTsensor_Incline.png',
         name: 'Incline',
         description: 'Detects tilt events for machinery, vehicles, and position-sensitive cargo. Alerts on deviation beyond configured angle.',
         range: '0°–90°',
@@ -171,7 +171,7 @@ const sensors = ref([
         color: 'from-emerald-500 to-teal-500',
     },
     {
-        image: '/image/services/openings.webp',
+        image: '/image/photo/IoTsensor_Door_Monitoring.png',
         name: 'Door Monitoring',
         description: 'Magnetic reed sensor detects every door open/close event. Tamper-evident logging for cargo security and chain of custody.',
         range: 'Open / Closed',
@@ -179,7 +179,7 @@ const sensors = ref([
         color: 'from-yellow-500 to-amber-500',
     },
     {
-        image: '/image/services/gps.webp',
+        image: '/image/photo/IoTsensor_GPS.png',
         name: 'GPS Positioning',
         description: 'Global satellite positioning with cellular fallback. Geofence alerts for route deviation and unauthorized stops.',
         range: 'Global',
@@ -187,7 +187,7 @@ const sensors = ref([
         color: 'from-blue-600 to-blue-800',
     },
     {
-        image: '/image/services/illuminated.webp',
+        image: '/image/photo/IoTsensor_Light_Exposure.png',
         name: 'Light Exposure',
         description: 'Detects unauthorized openings in dark-container shipments. Protects light-sensitive goods: film, chemicals, fine art.',
         range: '0–100k lux',
@@ -195,7 +195,7 @@ const sensors = ref([
         color: 'from-yellow-400 to-yellow-600',
     },
     {
-        image: '/image/services/gases.webp',
+        image: '/image/photo/IoTsensor_Gas_Detection.png',
         name: 'Gas Detection',
         description: 'Multi-gas monitoring: CO₂, O₂, ethylene, fumigant residue. Essential for produce, grain, and post-fumigation shipments.',
         range: 'Multi-gas',
@@ -219,11 +219,12 @@ const certifications = ref([
         <Head title="Our Services — Global Reach & IoT Management" />
 
         <!-- Hero Section -->
-        <section class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900">
-            <div class="absolute inset-0">
-                <img src="/image/main.webp" alt="Services Background" class="w-full h-full object-cover opacity-15" />
-                <div class="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-blue-900/85 to-blue-800/90"></div>
-            </div>
+        <section
+            class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900 bg-cover bg-center bg-no-repeat"
+            style="background-image: url('/image/photo/main_back.png');"
+        >
+            <!-- Dark overlay for readable text on top of the photo -->
+            <div class="absolute inset-0 bg-blue-900/60"></div>
             <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-yellow-400/8 to-transparent"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-700 rounded-full blur-3xl opacity-20"></div>
 
@@ -504,7 +505,7 @@ const certifications = ref([
                     <div class="lg:col-span-4 hidden lg:block">
                         <div class="sticky top-28">
                             <div class="relative overflow-hidden rounded-2xl shadow-lg">
-                                <img src="/image/services/process.webp" alt="Order Process" class="w-full h-[520px] object-cover" />
+                                <img src="/image/photo/Order_Process.png" alt="Order Process" class="w-full h-[520px] object-cover" />
                                 <div class="absolute inset-0 bg-gradient-to-t from-blue-900/70 via-blue-900/20 to-transparent"></div>
                                 <div class="absolute bottom-5 left-5 right-5">
                                     <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">

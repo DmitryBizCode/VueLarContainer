@@ -19,6 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: vuelarcontainer-php:latest
     container_name: ${APP_NAME:-laravel}_php
     restart: unless-stopped
     volumes:
@@ -150,7 +151,9 @@ services:
       - laravel
 
   queue:
-    image: vuelarcontainer-php:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ${APP_NAME:-laravel}_queue
     restart: unless-stopped
     working_dir: /var/www/html
@@ -171,7 +174,9 @@ services:
 
   # Long-poll worker для Telegram-бота (/start, keyboards, linking).
   telegram:
-    image: vuelarcontainer-php:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ${APP_NAME:-laravel}_telegram
     restart: unless-stopped
     working_dir: /var/www/html

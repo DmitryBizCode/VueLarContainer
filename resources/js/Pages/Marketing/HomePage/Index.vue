@@ -38,28 +38,28 @@ const services = ref([
 
 const benefits = ref([
     {
-        image: '/image/Reliable Delivery.webp',
+        image: '/image/photo/main_page_p1.png',
         title: 'Reliable Delivery',
         description: '98.7% on-time delivery rate across 15,000+ annual shipments. Dedicated account managers for priority and time-sensitive cargo.',
         stat: '98.7%',
         statLabel: 'on-time',
     },
     {
-        image: '/image/Warehouse Services.webp',
+        image: '/image/photo/main_page_p2.png',
         title: 'Warehouse Services',
         description: 'Bonded and non-bonded warehousing in Odesa, Hamburg, and Rotterdam. Short-term cross-docking and long-term storage with inventory management.',
         stat: '3',
         statLabel: 'locations',
     },
     {
-        image: '/image/EU and Global Reach.webp',
+        image: '/image/photo/main_page_p3.png',
         title: 'Global Reach',
         description: '120+ active trade routes from Ukraine to all continents. AEO-certified EU clearance with mutual recognition in Japan, China, and the US.',
         stat: '120+',
         statLabel: 'routes',
     },
     {
-        image: '/image/Product Sourcing.webp',
+        image: '/image/photo/main_page_p4.png',
         title: 'Product Sourcing',
         description: 'Procurement support in China, Turkey, and Southeast Asia. Factory audits, quality inspection, and consolidated shipping to reduce per-unit cost.',
         stat: '3',
@@ -123,7 +123,12 @@ const processes = ref([
         <Head title="Global Container Shipping & Logistics" />
 
         <!-- Hero Section - Asymmetric Design -->
-        <section class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900">
+        <section
+            class="relative min-h-[85vh] flex items-center overflow-hidden bg-blue-900 bg-cover bg-center bg-no-repeat"
+            style="background-image: url('/image/photo/main_back.png');"
+        >
+            <!-- Dark overlay for readable text on top of the photo -->
+            <div class="absolute inset-0 bg-blue-900/60"></div>
             <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-yellow-400/10 to-transparent"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-800 rounded-full blur-3xl opacity-50"></div>
             <!-- Subtle grid pattern overlay -->
@@ -279,7 +284,7 @@ const processes = ref([
                     <div class="lg:order-2">
                         <div class="relative group">
                             <img
-                                src="/image/500main.webp"
+                                src="/image/photo/Logistics_Management_home_page.jpeg"
                                 alt="Container Services"
                                 class="w-full h-[550px] object-cover rounded-3xl shadow-xl group-hover:shadow-2xl transition-shadow"
                             />
