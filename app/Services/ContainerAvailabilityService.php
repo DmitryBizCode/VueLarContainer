@@ -47,10 +47,16 @@ class ContainerAvailabilityService
 
         $portIds = $this->portIdsWithAvailableContainerAtPort();
 
+        $timeLoadDays = (int) config('logistics.time_load_days', 2);
+        $loadingCutoff = $now->addDays($timeLoadDays);
+
         $result = [];
         foreach ($portIds as $portId) {
             $departure = $this->vesselSchedule->nextDepartureWindowAtPort($portId, $now, $forecastDays);
-            if ($departure !== null) {
+            // Only include when the departure is far enough in the future to allow loading.
+            // If departure <= now + timeLoadDays the loading window has already closed, so
+            // we omit vessel_departure_at and let the date-picker be unconstrained.
+            if ($departure !== null && $departure->gt($loadingCutoff)) {
                 $result[] = [
                     'port_id' => $portId,
                     'vessel_departure_at' => $departure->toIso8601String(),

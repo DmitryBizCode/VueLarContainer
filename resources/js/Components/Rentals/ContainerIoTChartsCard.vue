@@ -79,10 +79,10 @@ function chartPointsTitle(sensor) {
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live conditions</p>
                 <h3 class="mt-1 text-lg font-bold text-slate-900">IoT sensors (last {{ periodHours }} h)</h3>
-                <p class=”mt-1 text-xs text-slate-500”>
-                    <template v-if=”iotCharts?.series_mode === 'raw_tail'”>
+                <p class="mt-1 text-xs text-slate-500">
+                    <template v-if="iotCharts?.series_mode === 'raw_tail'">
                         Showing the latest <strong>{{ monitorChartCap }}</strong> readings from active sensors.
-                        Date range applies to the “Door events” section below.
+                        Date range applies to the "Door events" section below.
                     </template>
                     <template v-else>
                         Sensor data aggregated into up to <strong>{{ monitorChartCap }}</strong> points per chart across the selected window.
@@ -227,13 +227,13 @@ function chartPointsTitle(sensor) {
 
             <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs text-emerald-900 lg:col-span-2">
                 <p class="font-semibold">Fluctuation analytics</p>
-                <p class=”mt-1 leading-relaxed”>
-                    <template v-if=”iotCharts?.series_mode === 'raw_tail'”>
+                <p class="mt-1 leading-relaxed">
+                    <template v-if="iotCharts?.series_mode === 'raw_tail'">
                         Statistics (min / max / mean / σ²) are computed from the latest readings shown on the chart.
                     </template>
                     <template v-else>
                         Statistics use <strong>all readings in the selected window</strong>, not only the chart points.
-                        If “Partial stats” appears, only the most recent readings were used due to the large dataset size.
+                        If "Partial stats" appears, only the most recent readings were used due to the large dataset size.
                     </template>
                 </p>
             </div>
